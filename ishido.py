@@ -93,7 +93,17 @@ class Ishido:
         self.victory_delay = 0
 
         # リロード確認ダイアログ
-        self.confirm_reload = False
+        self.confirm_reload  = False
+
+        # タイトルへ戻る確認ダイアログ
+        self.confirm_title   = False
+
+        # ✕ボタン（右上・スタート画面以外で常時表示）
+        # 正方形 12×12、盤面右端(234)より少し離して配置
+        self.btn_x_x  = 241
+        self.btn_x_y  = 3
+        self.btn_x_w  = 12
+        self.btn_x_h  = 12
 
         # ジョーカー石の状態（ENDLESS MODE 専用）
         self.joker_panel_open  = False        # パネル表示中
@@ -138,6 +148,7 @@ class Ishido:
         self.force_hint_timer = 0
         self.victory_delay    = 0
         self.confirm_reload    = False
+        self.confirm_title     = False
         self.joker_panel_open  = False
         self.joker_mode        = None
         self.joker_saved_stone = None
@@ -457,40 +468,11 @@ class Ishido:
             self._handle_input_result(mx, my)
             return
 
-        # デバッグ用キー
-        if pyxel.btnp(pyxel.KEY_1):
-            self.game_state = STATE_STALEMATE
-            self.effects.trigger_stalemate(is_initial=True)
-        if pyxel.btnp(pyxel.KEY_2):
-            self.game_state = STATE_STALEMATE
-            self.effects.trigger_stalemate(is_initial=False)
-        if pyxel.btnp(pyxel.KEY_9):
-            # デバッグ: STALEMATE → THE PATH シーケンスを一連で強制発動
-            self.game_state = STATE_STALEMATE
-            self.effects.trigger_stalemate(is_initial=False)
-            self.effects.result_timer = 999  # 待機時間をスキップ
-            self.effects.trigger_path_sequence()
-        if pyxel.btnp(pyxel.KEY_8):
-            # デバッグ: 全消しボーナスシーケンスを強制発動
-            self.effects.trigger_board_clear_bonus()
-            self.game_state = STATE_STALEMATE  # 入力ブロックのため一時的に STALEMATE へ
-        if pyxel.btnp(pyxel.KEY_4):
-            cx = self.offset_x + self.cursor_x * self.gap_x + self.sw // 2
-            cy = self.offset_y + self.cursor_y * self.gap_y + self.sh // 2
-            self.effects.trigger_4way(cx, cy, 15)
-            self.se.play_4way_match()
-        if pyxel.btnp(pyxel.KEY_0):
-            self.bag = []
-            self.current_stone = None
-            self.game_state = STATE_RESULT
-            self.effects.start_victory()
-            return
-
         self._handle_input_playing(mx, my)
 
     def _handle_input_start(self, mx, my):
         """スタート画面の入力処理。
-        表示順: [A] ALL WAYS → [I] ISHIDO+ → [E] ENDLESS ISHIDO++
+        表示順: [A] ALL WAYS → [I] ISHIDO+ → [E] ENDLESS ISHIDO++ → [H] HOW TO PLAY
         """
         if pyxel.btnp(pyxel.KEY_A):
             self.game_mode = MODE_ALL_WAYS
@@ -501,6 +483,8 @@ class Ishido:
         if pyxel.btnp(pyxel.KEY_E):
             self.game_mode = MODE_ENDLESS
             self.restart_game()
+        if pyxel.btnp(pyxel.KEY_H):
+            pyxel.open_url("https://kinappp.github.io/i-love-ishido/howtoplay.html")
         if pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and 80 <= mx <= 210:
             if 155 <= my <= 170:
                 self.game_mode = MODE_ALL_WAYS
@@ -511,6 +495,8 @@ class Ishido:
             elif 189 <= my <= 204:
                 self.game_mode = MODE_ENDLESS
                 self.restart_game()
+            elif 212 <= my <= 227:
+                pyxel.open_url("https://kinappp.github.io/i-love-ishido/howtoplay.html")
 
     def _handle_input_result(self, mx, my):
         """RESULT / STALEMATE 状態の入力処理。"""
@@ -604,6 +590,30 @@ class Ishido:
     def _handle_input_playing(self, mx, my):
         """ゲームプレイ中の入力処理。"""
         input_active = False
+
+        # タイトルへ戻る確認ダイアログ
+        if self.confirm_title:
+            if pyxel.btnp(pyxel.KEY_Y) or (
+                pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                and 88 <= mx <= 120 and 126 <= my <= 136
+            ):
+                self.confirm_title = False
+                self.game_state    = STATE_START
+                return
+            if pyxel.btnp(pyxel.KEY_N) or pyxel.btnp(pyxel.KEY_ESCAPE) or (
+                pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                and 132 <= mx <= 164 and 126 <= my <= 136
+            ):
+                self.confirm_title = False
+            return
+
+        # ✕ボタン（右上）のクリック
+        if (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                and self.btn_x_x <= mx < self.btn_x_x + self.btn_x_w
+                and self.btn_x_y <= my < self.btn_x_y + self.btn_x_h
+                and not self.confirm_title):
+            self.confirm_title = True
+            return
 
         # ジョーカーパネル操作（パネルが開いている間は他の入力をブロック）
         if self.joker_panel_open:
@@ -852,13 +862,54 @@ class Ishido:
             is_endless=(self.game_mode == MODE_ENDLESS)
         )
 
+        # ✕ボタン（右上・常時表示）
+        self._draw_x_button()
+
         # ジョーカーパネル（最前面）
         if self.joker_panel_open:
             self._draw_joker_panel()
 
+        # タイトルへ戻る確認ダイアログ
+        if self.confirm_title:
+            self._draw_confirm_title()
+
         # リロード確認ダイアログ（最前面・エフェクトより手前）
         if self.confirm_reload:
             self._draw_confirm_reload()
+
+    def _draw_x_button(self):
+        """右上の✕ボタンを描画する（スタート画面以外で常時表示）。"""
+        x, y, w, h = self.btn_x_x, self.btn_x_y, self.btn_x_w, self.btn_x_h
+        mx, my = pyxel.mouse_x, pyxel.mouse_y
+        is_hover = x <= mx < x + w and y <= my < y + h
+
+        # ボタンベース
+        base_col = 4 if is_hover else 6
+        pyxel.rect(x, y, w, h, base_col)
+        pyxel.line(x,         y,     x + w - 1, y,         7)
+        pyxel.line(x,         y,     x,         y + h - 1, 7)
+        pyxel.line(x + w - 1, y,     x + w - 1, y + h - 1, 2)
+        pyxel.line(x,         y + h - 1, x + w - 1, y + h - 1, 2)
+
+        # ✕の文字
+        col = 1 if is_hover else 0
+        pyxel.text(x + 4, y + 3, "X", col)
+
+    def _draw_confirm_title(self):
+        """タイトルへ戻る確認ダイアログを描画する。
+        テキスト:
+          "RETURN TO TITLE?" 16文字×4px=64px → x=96
+          "[Y] YES"  x=88  / "[N] NO" x=132
+        """
+        pyxel.rect(0, 100, 256, 60, 8)
+        pyxel.line(0, 100, 255, 100, 9)
+        pyxel.line(0, 159, 255, 159, 2)
+        pyxel.text(96, 112, "RETURN TO TITLE?", 1)
+        mx, my = pyxel.mouse_x, pyxel.mouse_y
+        y_col = 0 if (88 <= mx <= 120 and 126 <= my <= 136) else 5
+        n_col = 0 if (132 <= mx <= 164 and 126 <= my <= 136) else 5
+        pyxel.text( 88, 128, "[Y] YES", y_col)
+        pyxel.text(132, 128, "[N] NO",  n_col)
 
     def _draw_joker_panel(self):
         """ジョーカー石の COLOR / NUMBER 選択パネルを描画する。
@@ -919,9 +970,11 @@ class Ishido:
         a_col = 0 if (80 <= mx <= 210 and 155 <= my <= 170) else 5
         i_col = 0 if (80 <= mx <= 210 and 172 <= my <= 187) else 5
         e_col = 0 if (80 <= mx <= 210 and 189 <= my <= 204) else 5
+        h_col = 0 if (80 <= mx <= 210 and 212 <= my <= 227) else 5
         pyxel.text(94, 160, "[A] ALL WAYS MODE",    a_col)
         pyxel.text(94, 175, "[I] ISHIDO+ MODE",     i_col)
         pyxel.text(94, 190, "[E] ENDLESS ISHIDO++", e_col)
+        pyxel.text(94, 210, "[H] HOW TO PLAY",      h_col)
 
     def _draw_button(self, x, y, label, is_active, is_pressed):
         """御札風ボタンを描画する。"""

@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HOW TO PLAY — I LOVE ISHIDO</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Serif+JP:wght@400;700&display=swap');
+
+  :root {
+    --bg:       #aaaaaa;
+    --panel:    #999999;
+    --border-d: #444444;
+    --border-l: #cccccc;
+    --text:     #222222;
+    --text-sub: #444444;
+    --white:    #ffffff;
+    --red:      #cc4444;
+    --blue:     #4444cc;
+    --yellow:   #cccc44;
+    --green:    #44cc44;
+    --purple:   #cc44cc;
+    --cyan:     #44cccc;
+    --accent:   #cc4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* ヘッダー */
+  header {
+    background: var(--panel);
+    border-bottom: 3px solid var(--border-d);
+    border-top: 3px solid var(--border-l);
+    padding: 28px 24px 20px;
+    text-align: center;
+    position: relative;
+  }
+  header::before {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--border-l);
+  }
+
+  .site-title {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--text-sub);
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-size: clamp(22px, 5vw, 36px);
+    letter-spacing: 6px;
+    color: var(--text);
+    font-weight: normal;
+  }
+
+  .subtitle {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-sub);
+    letter-spacing: 2px;
+  }
+
+  /* 石のデコレーション */
+  .stones-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 16px;
+  }
+
+  .stone {
+    width: 16px;
+    height: 24px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .stone-body {
+    position: absolute;
+    inset: 0;
+    background: #aaaaaa;
+    box-shadow: 1px 1px 0 #444, -1px -1px 0 #ccc;
+  }
+
+  .stone-panel {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 10px; height: 18px;
+  }
+
+  .stone-num {
+    position: absolute;
+    top: 5px; left: 6px;
+    font-size: 7px;
+    color: white;
+    font-family: 'Share Tech Mono', monospace;
+    line-height: 1;
+  }
+
+  /* メインコンテンツ */
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 16px 0;
+  }
+
+  /* セクション */
+  section {
+    margin-bottom: 32px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--border-d);
+  }
+
+  .section-num {
+    background: var(--text);
+    color: var(--white);
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  h2 {
+    font-size: 14px;
+    letter-spacing: 3px;
+    font-weight: normal;
+  }
+
+  /* パネルカード */
+  .card {
+    background: var(--panel);
+    border-top: 2px solid var(--border-l);
+    border-left: 2px solid var(--border-l);
+    border-bottom: 2px solid var(--border-d);
+    border-right: 2px solid var(--border-d);
+    padding: 16px 18px;
+    margin-bottom: 10px;
+  }
+
+  .card p, .card li {
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--text);
+  }
+
+  .card ul { padding-left: 18px; }
+  .card ul li { list-style: none; padding-left: 0; }
+  .card ul li::before { content: "▸ "; color: var(--text-sub); }
+
+  /* モードカード */
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+  }
+
+  .mode-card {
+    background: var(--panel);
+    border-top: 2px solid var(--border-l);
+    border-left: 2px solid var(--border-l);
+    border-bottom: 2px solid var(--border-d);
+    border-right: 2px solid var(--border-d);
+    padding: 14px;
+  }
+
+  .mode-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-sub);
+    margin-bottom: 4px;
+  }
+
+  .mode-name {
+    font-size: 13px;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .mode-name.red    { color: var(--red); }
+  .mode-name.blue   { color: var(--blue); }
+  .mode-name.purple { color: var(--purple); }
+
+  .mode-desc {
+    font-size: 11px;
+    line-height: 1.8;
+    color: var(--text);
+  }
+
+  .mode-star {
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--text-sub);
+  }
+
+  /* キーテーブル */
+  .key-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  .key-table tr {
+    border-bottom: 1px solid var(--border-d);
+  }
+
+  .key-table tr:last-child { border-bottom: none; }
+
+  .key-table td {
+    padding: 7px 8px;
+    vertical-align: top;
+  }
+
+  .key-table td:first-child {
+    width: 38%;
+    color: var(--text-sub);
+  }
+
+  .kbd {
+    display: inline-block;
+    background: var(--bg);
+    border-top: 1px solid var(--border-l);
+    border-left: 1px solid var(--border-l);
+    border-bottom: 2px solid var(--border-d);
+    border-right: 2px solid var(--border-d);
+    padding: 1px 5px;
+    font-size: 10px;
+    margin: 0 2px;
+    white-space: nowrap;
+  }
+
+  /* UIラベル */
+  .ui-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  @media (max-width: 480px) {
+    .ui-grid { grid-template-columns: 1fr; }
+    .mode-grid { grid-template-columns: 1fr; }
+  }
+
+  .ui-item {
+    background: var(--panel);
+    border-top: 2px solid var(--border-l);
+    border-left: 2px solid var(--border-l);
+    border-bottom: 2px solid var(--border-d);
+    border-right: 2px solid var(--border-d);
+    padding: 10px 12px;
+  }
+
+  .ui-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+
+  .ui-desc {
+    font-size: 11px;
+    line-height: 1.7;
+  }
+
+  /* 石道セクション */
+  .tribute {
+    background: var(--panel);
+    border-top: 2px solid var(--border-l);
+    border-left: 2px solid var(--border-l);
+    border-bottom: 2px solid var(--border-d);
+    border-right: 2px solid var(--border-d);
+    padding: 20px 22px;
+  }
+
+  .tribute p {
+    font-size: 12px;
+    line-height: 2;
+    margin-bottom: 12px;
+  }
+
+  .tribute p:last-child { margin-bottom: 0; }
+
+  .tribute em {
+    font-style: normal;
+    color: var(--text-sub);
+    font-size: 11px;
+  }
+
+  /* フッター */
+  footer {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 2px solid var(--border-d);
+    font-size: 10px;
+    color: var(--text-sub);
+    letter-spacing: 2px;
+  }
+
+  footer a {
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  footer a:hover { text-decoration: underline; }
+
+  .back-btn {
+    display: inline-block;
+    margin-top: 20px;
+    background: var(--panel);
+    border-top: 2px solid var(--border-l);
+    border-left: 2px solid var(--border-l);
+    border-bottom: 3px solid var(--border-d);
+    border-right: 3px solid var(--border-d);
+    padding: 8px 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .back-btn:hover {
+    background: var(--bg);
+  }
+
+  /* 区切り線 */
+  hr.section-rule {
+    border: none;
+    border-top: 1px solid var(--border-d);
+    margin: 24px 0;
+  }
+
+  /* タグ */
+  .tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 1px 6px;
+    border: 1px solid var(--border-d);
+    color: var(--text-sub);
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .tag.hard { border-color: var(--red); color: var(--red); }
+  .tag.new  { border-color: var(--blue); color: var(--blue); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">I LOVE ISHIDO</div>
+  <h1>HOW TO PLAY</h1>
+  <p class="subtitle">A guide to the stone-placement game</p>
+  <div class="stones-row" aria-hidden="true">
+    <div class="stone"><div class="stone-body"></div><div class="stone-panel" style="background:#cc4444"></div><div class="stone-num">1</div></div>
+    <div class="stone"><div class="stone-body"></div><div class="stone-panel" style="background:#4444cc"></div><div class="stone-num">2</div></div>
+    <div class="stone"><div class="stone-body"></div><div class="stone-panel" style="background:#cccc44"></div><div class="stone-num">3</div></div>
+    <div class="stone"><div class="stone-body"></div><div class="stone-panel" style="background:#44cc44"></div><div class="stone-num">4</div></div>
+    <div class="stone"><div class="stone-body"></div><div class="stone-panel" style="background:#cc44cc"></div><div class="stone-num">5</div></div>
+    <div class="stone"><div class="stone-body"></div><div class="stone-panel" style="background:#44cccc"></div><div class="stone-num">6</div></div>
+  </div>
+</header>
+
+<main>
+
+  <!-- 1. ゲームモード -->
+  <section>
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <h2>GAME MODES</h2>
+    </div>
+    <div class="mode-grid">
+      <div class="mode-card">
+        <div class="mode-label">MODE A</div>
+        <div class="mode-name">[A] ALL WAYS MODE</div>
+        <div class="mode-desc">
+          The classic rules. Place a stone next to any stone that shares either the same color or the same number.<br><br>
+          Aim to empty the bag (LEFT: 0) and reach the <strong>CONGRATULATIONS!</strong> screen.
+        </div>
+        <div class="mode-star">★ Recommended for beginners</div>
+      </div>
+      <div class="mode-card">
+        <div class="mode-label">MODE I</div>
+        <div class="mode-name red">[I] ISHIDO+ MODE <span class="tag hard">HARD</span></div>
+        <div class="mode-desc">
+          Stricter XOR rule. A stone must match <em>either</em> color <em>or</em> number with each adjacent stone — not both, not neither.<br><br>
+          Identical stones cannot be placed next to each other. Reaching LEFT: 0 is a true achievement.
+        </div>
+        <div class="mode-star">★★ For experienced players</div>
+      </div>
+      <div class="mode-card">
+        <div class="mode-label">MODE E</div>
+        <div class="mode-name purple">[E] ENDLESS ISHIDO++ <span class="tag new">NEW</span></div>
+        <div class="mode-desc">
+          ISHIDO+ rules with a twist: when you achieve a WAY match, all stones involved dissolve and return to the bag — keeping the board alive.<br><br>
+          How many LOOPs can you complete?
+        </div>
+        <div class="mode-star">★★★ The endless challenge</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 基本ルール -->
+  <section>
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <h2>PLACEMENT RULES</h2>
+    </div>
+    <div class="card">
+      <ul>
+        <li>Stones are drawn one at a time from the bag (shown as NEXT).</li>
+        <li>A stone can only be placed next to an existing stone — isolated placements are not allowed.</li>
+        <li>In <strong>ALL WAYS</strong>: each adjacent stone must share the same color <em>or</em> the same number.</li>
+        <li>In <strong>ISHIDO+ / ENDLESS</strong>: each adjacent stone must match on <em>exactly one</em> attribute — color XOR number.</li>
+        <li>Placing next to 2, 3, or 4 stones at once scores a <strong>2WAY / 3WAY / 4WAY</strong>!</li>
+        <li>If no valid placement exists, the game ends with <strong>STALEMATE</strong>.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <p><strong>WAY scoring</strong><br>
+      The 6 initial stones are placed at the four corners and two center squares before play begins.<br>
+      Aim to build chains — positioning stones where they touch multiple others creates WAY combos.</p>
+    </div>
+  </section>
+
+  <!-- 3. ENDLESS MODE 詳細 -->
+  <section>
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <h2>ENDLESS MODE IN DETAIL</h2>
+    </div>
+    <div class="card">
+      <ul>
+        <li><strong>WAY match:</strong> The placed stone and all adjacent matching stones dissolve and enter the SUB bag.</li>
+        <li><strong>LOOP:</strong> When the main bag empties, the SUB bag shuffles and becomes the new main bag. LOOP count increases by 1.</li>
+        <li><strong>JOKER stone:</strong> A special stone that can be placed anywhere adjacent. Use it to break through STALEMATE.</li>
+        <li>JOKER is consumed on use and does not return to the bag. The board placement remains until a WAY is scored.</li>
+        <li><strong>Board Clear:</strong> If all stones dissolve from the board, a special bonus triggers — four corner stones are re-placed, and a bonus JOKER is awarded.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <p><strong>JOKER supply</strong></p>
+      <ul>
+        <li>Game start: 1 JOKER (a gift for the early game)</li>
+        <li>Each LOOP achieved: +2 JOKERs</li>
+        <li>Board Clear bonus: +1 JOKER</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <p><strong>JOKER — COLOR mode</strong><br>
+      The JOKER stone displays a flowing rainbow panel. In COLOR mode, it is treated as matching any color.</p>
+      <p style="margin-top:8px;"><strong>JOKER — NUMBER mode</strong><br>
+      The JOKER stone displays a grey panel with "?". In NUMBER mode, it is treated as matching any number.</p>
+      <p style="margin-top:8px;">Once a JOKER mode is chosen, UNDO history is cleared — the path is committed.</p>
+    </div>
+  </section>
+
+  <!-- 4. 画面説明 -->
+  <section>
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <h2>SCREEN GUIDE</h2>
+    </div>
+    <div class="ui-grid">
+      <div class="ui-item">
+        <div class="ui-label">NEXT</div>
+        <div class="ui-desc">The stone you are about to place. Click or press SPACE to place it on the highlighted cell.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-label">LEFT</div>
+        <div class="ui-desc">Stones remaining in the main bag. Reach 0 to win (ALL WAYS / ISHIDO+ modes).</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-label">SUB (ENDLESS)</div>
+        <div class="ui-desc">Dissolved stones waiting in the secondary bag. When the main bag empties, SUB becomes the new bag.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-label">LOOP (ENDLESS)</div>
+        <div class="ui-desc">How many times the main bag has been cycled through.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-label">JOKER (ENDLESS)</div>
+        <div class="ui-desc">Number of JOKER stones in hand. Shown in red when available. Press [J] to use.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-label">CURSOR</div>
+        <div class="ui-desc">White border = valid placement. Red border = invalid. Move with mouse.</div>
+      </div>
+    </div>
+
+    <hr class="section-rule">
+
+    <p style="font-size:11px;color:var(--text-sub);margin-bottom:10px;letter-spacing:1px;">BUTTONS (bottom row)</p>
+    <div class="ui-grid">
+      <div class="ui-item">
+        <div class="ui-label">[J] — JOKER</div>
+        <div class="ui-desc">Opens the JOKER selection panel. Choose COLOR or NUMBER mode, or press [B] to cancel. Available in ENDLESS mode only.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-label">[U] — UNDO</div>
+        <div class="ui-desc">Reverts the last stone placement. Not available after using a JOKER.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-label">[H] — HINT</div>
+        <div class="ui-desc">Toggles the spiritual hint overlay — glowing dots show all valid placements.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-label">[R] — RELOAD</div>
+        <div class="ui-desc">Restart the current mode. A confirmation dialog appears before restarting.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-label">[✕] — TITLE</div>
+        <div class="ui-desc">Return to the title screen. A confirmation dialog appears. Located in the top-right corner.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. キーボード -->
+  <section>
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <h2>KEYBOARD SHORTCUTS</h2>
+    </div>
+    <div class="card">
+      <table class="key-table">
+        <tr>
+          <td><span class="kbd">SPACE</span> or <span class="kbd">Click</span></td>
+          <td>Place the NEXT stone at cursor position</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">H</span></td>
+          <td>Toggle hint overlay (title screen: open How to Play)</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">U</span> or <span class="kbd">BS</span></td>
+          <td>Undo last placement</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">Right-click</span></td>
+          <td>Undo last placement</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">R</span></td>
+          <td>Reload (restart current mode)</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">J</span></td>
+          <td>Open JOKER panel (ENDLESS mode)</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">C</span> / <span class="kbd">N</span></td>
+          <td>Select COLOR / NUMBER in JOKER panel</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">B</span> or <span class="kbd">ESC</span></td>
+          <td>Cancel / close dialog</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">Y</span> / <span class="kbd">N</span></td>
+          <td>Confirm YES / NO in dialogs</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">G</span></td>
+          <td>Go Again (after CONGRATULATIONS!)</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">T</span></td>
+          <td>Return to Title (after CONGRATULATIONS!)</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">A</span> / <span class="kbd">I</span> / <span class="kbd">E</span></td>
+          <td>Select mode on title screen</td>
+        </tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6. 石道について -->
+  <section>
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <h2>ABOUT THE ORIGINAL ISHIDO</h2>
+    </div>
+    <div class="tribute">
+      <p>
+        <strong>Ishido: The Way of Stones</strong> is a classic puzzle game first released in 1990 by
+        Publishing International. The PC-98 version, in particular, left a lasting impression on many players
+        in Japan with its meditative pace and elegant stone-matching mechanics.
+      </p>
+      <p>
+        The core rule — place a stone that matches either the color or the number of each adjacent stone —
+        sounds simple, but creates a surprisingly deep experience. Building toward a 4WAY feels as satisfying
+        now as it did decades ago.
+      </p>
+      <p>
+        <strong>I LOVE ISHIDO</strong> was built as a loving reimagination of that classic, adding ISHIDO+ mode
+        with stricter XOR rules and the original ENDLESS ISHIDO++ mode with the JOKER stone mechanic.
+        The result is a game that honors the original while finding new depths in the same stone-on-board philosophy.
+      </p>
+      <p>
+        To the creators of the original Ishido — thank you for the stones, the paths, and the way.<br>
+        <em>「閑さや 岩にしみ入る 石の音」</em>
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <p>I LOVE ISHIDO &nbsp;·&nbsp; Created by <a href="https://github.com/KINAppp" target="_blank">KINA</a> &nbsp;·&nbsp; Built with <a href="https://github.com/kitao/pyxel" target="_blank">Pyxel</a> &nbsp;·&nbsp; MIT License</p>
+    <a class="back-btn" href="ishido.html">▶ PLAY THE GAME</a>
+  </footer>
+
+</main>
+
+</body>
+</html>
