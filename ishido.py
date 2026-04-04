@@ -7,7 +7,7 @@
 
 import pyxel
 import math
-import block
+import theme_default as theme
 import se
 import bgm
 import effect
@@ -66,7 +66,7 @@ class Ishido:
 
     def __init__(self):
         pyxel.init(256, 256, title="I LOVE ISHIDO")
-        self._setup_palette()
+        theme.setup_palette()
         self.se  = se.SEPlayer()
         self.bgm = bgm.BGMPlayer()
         self.effects = effect.EffectManager()
@@ -129,23 +129,9 @@ class Ishido:
     #  初期化
     # ------------------------------------------------------------------ #
 
-    def _setup_palette(self):
-        """ゲーム用カラーパレットを設定する。
-        0〜9: UI 用グレースケール系
-        10〜15: 石のカラーパネル用（赤・青・黄・緑・紫・水色）
-        """
-        colors = [
-            0x000000, 0xffffff, 0x222222, 0x444444,
-            0x666666, 0x888888, 0x999999, 0xaaaaaa,
-            0xbbbbbb, 0xcccccc, 0xcc4444, 0x4444cc,
-            0xcccc44, 0x44cc44, 0xcc44cc, 0x44cccc,
-        ]
-        for i, c in enumerate(colors):
-            pyxel.colors[i] = c
-
     def restart_game(self):
         """ゲームを初期状態にリセットして開始する。"""
-        self.bag     = block.Block.get_initial_bag()
+        self.bag     = theme.get_initial_bag()
         self.board   = [[None] * BOARD_COLS for _ in range(BOARD_ROWS)]
         self.history = []
         self.stats   = {"4WAY": 0, "3WAY": 0, "2WAY": 0}
@@ -766,40 +752,26 @@ class Ishido:
         # 盤面背景
         pyxel.cls(8)
 
-        # 盤面外枠（立体表現：石やボタンと同じベベル方式）
-        _fx = self.offset_x - 4
-        _fy = self.offset_y - 4
-        _fw = BOARD_COLS * self.gap_x + 6
-        _fh = BOARD_ROWS * self.gap_y + 6
-        pyxel.rect(_fx,     _fy,     _fw,     _fh,     2)  # 右・下の影
-        pyxel.rect(_fx,     _fy,     _fw - 2, _fh - 2, 9)  # 左・上のハイライト
-        pyxel.rect(_fx + 2, _fy + 2, _fw - 4, _fh - 4, 4)  # 中央パネル
+        # 盤面外枠（テーマに委譲）
+        theme.draw_board_frame(
+            self.offset_x - 4,
+            self.offset_y - 4,
+            BOARD_COLS * self.gap_x + 6,
+            BOARD_ROWS * self.gap_y + 6,
+        )
 
-        # 盤面セルと石
-        # セルカラーのルール:
-        #   明るい（color 7）: 四隅・内側（x=1〜10, y=1〜6）・中央初期配置（5,3）（6,4）
-        #   暗い（color 6）: 外周リング・中央対角（5,4）（6,3）
-        # 中央2×2エリアは (5,3)(6,4)=明、(5,4)(6,3)=暗 のチェッカー模様
-        _corners        = {(0, 0), (11, 0), (0, 7), (11, 7)}
-        _center_dark    = {(5, 4), (6, 3)}   # 中央チェッカーの暗い対角
+        # 盤面セルと石（テーマに委譲）
         for y in range(BOARD_ROWS):
             for x in range(BOARD_COLS):
                 bx = self.offset_x + x * self.gap_x
                 by = self.offset_y + y * self.gap_y
-                is_inner  = 1 <= x <= 10 and 1 <= y <= 6
-                is_corner = (x, y) in _corners
-                is_c_dark = (x, y) in _center_dark
-                if (is_inner or is_corner) and not is_c_dark:
-                    cell_col = 7  # 明るいグレー
-                else:
-                    cell_col = 6  # 通常グレー
-                pyxel.rect(bx, by, self.sw, self.sh, cell_col)
+                pyxel.rect(bx, by, self.sw, self.sh, theme.get_cell_color(x, y))
                 if self.board[y][x]:
                     stone = self.board[y][x]
                     if isinstance(stone, tuple) and stone[0] == "J":
-                        block.Block.draw_joker_stone(bx, by, stone[1])
+                        theme.draw_joker_stone(bx, by, stone[1])
                     else:
-                        block.Block.draw_stone(bx, by, stone[0], stone[1])
+                        theme.draw_stone(bx, by, stone[0], stone[1])
 
         # ヒントオーバーレイ
         if self.show_hint_spiritual:
@@ -819,11 +791,11 @@ class Ishido:
         pyxel.text(self.offset_x, self.ui_row_y + 8, "NEXT:", 0)
         if self.current_stone:
             if isinstance(self.current_stone, tuple) and self.current_stone[0] == "J":
-                block.Block.draw_joker_stone(
+                theme.draw_joker_stone(
                     self.offset_x + 25, self.ui_row_y, self.current_stone[1]
                 )
             else:
-                block.Block.draw_stone(
+                theme.draw_stone(
                     self.offset_x + 25, self.ui_row_y,
                     self.current_stone[0], self.current_stone[1]
                 )
