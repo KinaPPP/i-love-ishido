@@ -574,8 +574,9 @@ class Ishido:
                     self.joker_panel_open     = True
                     return
                 if give_up:
-                    # [R] GIVE UP クリック → 通常の STALEMATE 処理へ
-                    self.effects.is_joker_rescue = False
+                    # [R] GIVE UP → ENDLESS は即リスタート
+                    self.restart_game()
+                    return
 
             is_reload = pyxel.btnp(pyxel.KEY_R) or (
                 pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
