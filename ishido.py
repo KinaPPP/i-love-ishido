@@ -19,6 +19,16 @@ except ImportError:
     import webbrowser
     IS_WEB = False
 
+# ローカル実行時のみデバッグ機能を有効化
+if not IS_WEB:
+    try:
+        import debug as _debug
+        _DEBUG_ENABLED = True
+    except ImportError:
+        _DEBUG_ENABLED = False  # debug.py がない場合は無効
+else:
+    _DEBUG_ENABLED = False
+
 # ------------------------------------------------------------------ #
 #  定数
 # ------------------------------------------------------------------ #
@@ -233,11 +243,20 @@ class Ishido:
         return True
 
     def _check_board_empty(self):
-        """盤面が完全に空かどうかを判定する（ENDLESS MODE 全消しボーナス用）。"""
+        """持ち石が全て消えたかどうかを判定する（ENDLESS MODE 全消しボーナス用）。
+        JOKER石は持ち石ではないため判定から除外する。
+        盤面にJOKERだけが残っている状態も「全消し」と見なす。
+        ※ JOKERを盤面に置いたまま持ち石を消し続けるBLOCK戦術が有効になる。
+        """
         for y in range(BOARD_ROWS):
             for x in range(BOARD_COLS):
-                if self.board[y][x] is not None:
-                    return False
+                stone = self.board[y][x]
+                if stone is None:
+                    continue
+                # JOKER石（持ち石ではない）は全消し判定から除外
+                if isinstance(stone, tuple) and stone[0] == "J":
+                    continue
+                return False  # 持ち石が1枚でも残っていれば全消しではない
         return True
 
     def _endless_board_clear_restart(self):
@@ -461,14 +480,30 @@ class Ishido:
             self._handle_input_result(mx, my)
             return
 
+        # デバッグキー（ローカル実行時のみ）
+        if _DEBUG_ENABLED:
+            _debug.handle_debug_keys(self)
+            if self.game_state != "PLAYING":
+                return
+
         self._handle_input_playing(mx, my)
     def _open_how_to_play(self):
-        """ローカルとWebで適切にHow To Playページを開く"""
-        url = "https://kinappp.github.io/i-love-ishido/howtoplay.html"
+        """ローカルとWebで適切に、自分と同じ場所にあるHow To Playページを開く"""
+        filename = "howtoplay.html"
+        
         if IS_WEB:
-            js.window.open(url, "_blank")  # Web版はJavaScriptの機能で別タブを開く
+            # Web版：相対パスを指定すれば、同じディレクトリのファイルが開く
+            js.window.open(filename, "_blank")
         else:
-            webbrowser.open(url)           # ローカル版は標準ブラウザを開く
+            # ローカル版：実行中の ishido.py と同じフォルダにあるファイルのフルパスを作る
+            import os
+            # このスクリプトがあるディレクトリを取得
+            base_dir = os.path.dirname(__file__)
+            # ファイル名と結合して絶対パスに変換
+            target_path = os.path.abspath(os.path.join(base_dir, filename))
+            
+            # 標準ブラウザでローカルファイルを開く
+            webbrowser.open(target_path)
 
     def _handle_input_start(self, mx, my):
         """スタート画面の入力処理。
