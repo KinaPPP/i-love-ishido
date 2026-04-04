@@ -12,6 +12,13 @@ import se
 import bgm
 import effect
 
+try:
+    import js
+    IS_WEB = True
+except ImportError:
+    import webbrowser
+    IS_WEB = False
+
 # ------------------------------------------------------------------ #
 #  定数
 # ------------------------------------------------------------------ #
@@ -469,6 +476,13 @@ class Ishido:
             return
 
         self._handle_input_playing(mx, my)
+    def _open_how_to_play(self):
+        """ローカルとWebで適切にHow To Playページを開く"""
+        url = "https://kinappp.github.io/i-love-ishido/howtoplay.html"
+        if IS_WEB:
+            js.window.open(url, "_blank")  # Web版はJavaScriptの機能で別タブを開く
+        else:
+            webbrowser.open(url)           # ローカル版は標準ブラウザを開く
 
     def _handle_input_start(self, mx, my):
         """スタート画面の入力処理。
@@ -484,7 +498,7 @@ class Ishido:
             self.game_mode = MODE_ENDLESS
             self.restart_game()
         if pyxel.btnp(pyxel.KEY_H):
-            pyxel.open_url("https://kinappp.github.io/i-love-ishido/howtoplay.html")
+            self._open_how_to_play()
         if pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and 80 <= mx <= 210:
             if 155 <= my <= 170:
                 self.game_mode = MODE_ALL_WAYS
@@ -496,7 +510,7 @@ class Ishido:
                 self.game_mode = MODE_ENDLESS
                 self.restart_game()
             elif 212 <= my <= 227:
-                pyxel.open_url("https://kinappp.github.io/i-love-ishido/howtoplay.html")
+                self._open_how_to_play()
 
     def _handle_input_result(self, mx, my):
         """RESULT / STALEMATE 状態の入力処理。"""
