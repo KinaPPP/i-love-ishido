@@ -215,14 +215,15 @@ class Ishido:
                     return False
             return True
         else:
-            # ALL WAYS: いずれか一つと色または数字が一致すれば置ける
-            # 盤面上のJOKER石は常に一致扱い
+            # ALL WAYS: 全隣接石と色または数字のどちらかが一致する必要がある
+            # 「1個でも両方違う隣接石があれば置けない」方式（ブラックリスト）
+            # 盤面上のJOKER石は常に一致扱い（スキップ）
             for adj in adjacents:
                 if isinstance(adj, tuple) and adj[0] == "J":
-                    return True
-                if stone[0] == adj[0] or stone[1] == adj[1]:
-                    return True
-            return False
+                    continue  # JOKERはどんな石でも受け入れる
+                if stone[0] != adj[0] and stone[1] != adj[1]:
+                    return False  # 色も数字も一致しない → NG
+            return True  # 全隣接石のチェックを通過 → OK
 
     def _check_stalemate(self):
         """現在の手番石が盤面のどこにも置けない場合 True を返す。"""
@@ -536,6 +537,30 @@ class Ishido:
     def _handle_input_result(self, mx, my):
         """RESULT / STALEMATE 状態の入力処理。"""
         self.effects.update()
+
+        # STALEMATE / RESULT 中でも ✕ボタンでタイトルへ戻れる
+        if self.confirm_title:
+            if pyxel.btnp(pyxel.KEY_Y) or (
+                pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                and 88 <= mx <= 120 and 126 <= my <= 136
+            ):
+                self.confirm_title = False
+                self.game_state    = STATE_START
+                self.effects       = effect.EffectManager()
+                return
+            if pyxel.btnp(pyxel.KEY_N) or pyxel.btnp(pyxel.KEY_ESCAPE) or (
+                pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                and 132 <= mx <= 164 and 126 <= my <= 136
+            ):
+                self.confirm_title = False
+            return
+
+        # ✕ボタンのクリック（STALEMATE / RESULT 中）
+        if (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                and self.btn_x_x <= mx < self.btn_x_x + self.btn_x_w
+                and self.btn_x_y <= my < self.btn_x_y + self.btn_x_h):
+            self.confirm_title = True
+            return
 
         # THE PATH シーケンス完了 → リロード
         if self.effects.path_done:
