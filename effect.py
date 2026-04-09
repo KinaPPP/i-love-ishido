@@ -349,9 +349,15 @@ class EffectManager:
         """
         if is_endless:
             line1 = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02}"
-            line2 = f"LEFT:{left:02} LOOP:{loop} & JOKER:{joker}"
-            pyxel.text(82, 135, line1, 7)
-            pyxel.text(80, 145, line2, 7)
+            line2 = f"LOOP:{loop} & JOKER:{joker}"
+            
+            # 文字数からx座標を自動計算して完全センタリング
+            x1 = (256 - len(line1) * 4) // 2
+            x2 = (256 - len(line2) * 4) // 2
+            
+            # 修正: 固定の数字ではなく、計算した変数 x1, x2 を渡す！
+            pyxel.text(x1, 135, line1, 7)
+            pyxel.text(x2, 145, line2, 7)
         else:
             # ALL WAYS / ISHIDO+ 用
             if left > 0:

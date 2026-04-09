@@ -311,7 +311,8 @@ class Ishido:
     def _undo(self):
         """一手戻す。履歴がある場合のみ実行し、成否を返す。"""
         if self.history:
-            self.board, self.bag, self.current_stone, self.stats = self.history.pop()
+            # 修正：サブ袋（sub_bag）も履歴から一緒に巻き戻す
+            self.board, self.bag, self.current_stone, self.stats, self.sub_bag = self.history.pop()
             self.game_state = STATE_PLAYING
             self.effects    = effect.EffectManager()
             self.undo_interval = 10
@@ -356,6 +357,7 @@ class Ishido:
             self.bag[:],
             self.joker_saved_stone if is_joker else self.current_stone,
             self.stats.copy(),
+            self.sub_bag[:]  # 修正：サブ袋の中身もコピーして履歴に保存する
         ))
 
         # 2WAY 以上なら統計更新＋エフェクト発火
