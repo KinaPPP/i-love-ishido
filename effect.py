@@ -353,8 +353,15 @@ class EffectManager:
             pyxel.text(82, 135, line1, 7)
             pyxel.text(80, 145, line2, 7)
         else:
-            res = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02} LEFT:{left:02}"
-            pyxel.text(70, 140, res, 7)
+            # ALL WAYS / ISHIDO+ 用
+            if left > 0:
+                # STALEMATE時など、石が残っている場合はLEFTを表示
+                res = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02} LEFT:{left:02}"
+                pyxel.text(70, 140, res, 7)
+            else:
+                # クリア時（leftが0）はLEFTを非表示にし、少し右にずらしてセンタリング
+                res = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02}"
+                pyxel.text(86, 140, res, 7)
         mx, my = pyxel.mouse_x, pyxel.mouse_y
         g_col = 1 if (104 <= mx <= 152 and 162 <= my <= 172) else 7
         t_col = 1 if (104 <= mx <= 140 and 177 <= my <= 187) else 7
