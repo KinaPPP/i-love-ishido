@@ -87,3 +87,18 @@ def handle_debug_keys(game):
         game.effects.trigger_stalemate(is_initial=False)
         game.effects.result_timer = 999     # 待機時間をスキップ
         game.effects.trigger_path_sequence()
+
+    # [M] MARVELOUS 強制発動（押すたびに HARMONY → MONSTER → FLOW → None と切り替え）
+    if pyxel.btnp(pyxel.KEY_M):
+        ranks = [None, "HARMONY", "MONSTER", "FLOW"]
+        current = game.effects.marvelous_rank
+        next_rank = ranks[(ranks.index(current) + 1) % len(ranks)]
+        game.game_state = "STALEMATE"
+        game.effects.trigger_stalemate(
+            is_initial=False,
+            marvelous_rank=next_rank
+        )
+        if next_rank:
+            print(f"[DEBUG] MARVELOUS: {next_rank}")
+        else:
+            print("[DEBUG] MARVELOUS: OFF (通常STALEMATE)")

@@ -148,6 +148,8 @@ class Ishido:
         self.loop_count  = 0
         self.joker_count = 1 if self.game_mode == MODE_ENDLESS else 0
 
+        logic.init_marvelous(self)   # MARVELOUSフラグ初期化
+
         self.game_state = STATE_PLAYING
 
         # 初手詰まりチェック
@@ -184,6 +186,12 @@ class Ishido:
         """メインループの更新処理。"""
         if self.undo_interval > 0:
             self.undo_interval -= 1
+
+        # タイトルバーにモード名を表示（スタート画面はシンプルに）
+        if self.game_state == STATE_START:
+            pyxel.title("I LOVE ISHIDO")
+        else:
+            pyxel.title(f"I LOVE ISHIDO [MODE: {self.game_mode}]")
 
         mx, my = pyxel.mouse_x, pyxel.mouse_y
 

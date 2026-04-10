@@ -126,10 +126,17 @@ def handle_result(g, mx, my):
             if give_up:
                 g.restart_game(); return
 
+        # MARVELOUS画面専用の入力（timer>=120から受付）
+        if g.effects.marvelous_rank and g.effects.result_timer < 120:
+            return  # 演出中は入力ブロック
+
         is_reload = pyxel.btnp(pyxel.KEY_R) or (
             pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
-            and g.btn_reload_x <= mx < g.btn_reload_x + g.btn_w
-            and g.ui_row_y <= my < g.ui_row_y + g.btn_h
+            and (g.btn_reload_x <= mx < g.btn_reload_x + g.btn_w
+                 and g.ui_row_y <= my < g.ui_row_y + g.btn_h
+                 # MARVELOUS帯内の[R] RELOAD テキスト
+                 or (g.effects.marvelous_rank
+                     and 88 <= mx <= 124 and 151 <= my <= 159))
         )
         if is_reload:
             if g.game_mode == MODE_ISHIDO and not g.effects.is_initial_stalemate:
@@ -143,8 +150,11 @@ def handle_result(g, mx, my):
             or (g.undo_interval == 0 and (
                 pyxel.btnp(pyxel.MOUSE_BUTTON_RIGHT)
                 or (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
-                    and g.btn_undo_x <= mx < g.btn_undo_x + g.btn_w
-                    and g.ui_row_y <= my < g.ui_row_y + g.btn_h)
+                    and (g.btn_undo_x <= mx < g.btn_undo_x + g.btn_w
+                         and g.ui_row_y <= my < g.ui_row_y + g.btn_h
+                         # MARVELOUS帯内の[U] UNDO テキスト
+                         or (g.effects.marvelous_rank
+                             and 132 <= mx <= 168 and 151 <= my <= 159)))
             ))
         )
         if is_undo:

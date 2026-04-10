@@ -171,6 +171,7 @@ def endless_draw_next_stone(g):
         g.loop_count  += 1
         g.joker_count += 2
         g.se.play_loop_and_joker(2)
+        update_marvelous_on_loop(g)   # MARVELOUSカウンター更新
         return g.bag.pop()
     return None
 
@@ -293,6 +294,10 @@ def place_stone(g):
     else:
         g.current_stone = g.bag.pop() if g.bag else None
 
+    # MARVELOUSカウンター更新（ENDLESS のみ）
+    if g.game_mode == MODE_ENDLESS:
+        update_marvelous_on_place(g, adj)
+
     # 終了判定
     if g.game_mode == MODE_ENDLESS:
         if check_board_full(g):
@@ -303,7 +308,11 @@ def place_stone(g):
             g.effects.trigger_stalemate()
         elif check_stalemate(g):
             g.game_state = STATE_STALEMATE
-            g.effects.trigger_stalemate(is_joker_rescue=(g.joker_count > 0))
+            rank = get_marvelous_rank(g)
+            g.effects.trigger_stalemate(
+                is_joker_rescue=(g.joker_count > 0),
+                marvelous_rank=rank
+            )
     else:
         if not g.current_stone and not g.bag:
             if adj >= 2:
@@ -317,3 +326,75 @@ def place_stone(g):
             g.effects.trigger_stalemate()
 
     return True
+
+
+# ------------------------------------------------------------------ #
+#  MARVELOUS カウンター管理
+# ------------------------------------------------------------------ #
+
+def init_marvelous(g):
+    """MARVELOUSフラグを初期化する。restart_game時に呼ぶ。"""
+    g.marvelous_40_reached   = False  # 盤面40+を一度でも達成したか
+    g.marvelous_41_reached   = False  # 盤面41+を一度でも達成したか
+    g.marvelous_4way_done    = False  # 40+達成後に4WAYを1回以上決めたか
+    g.marvelous_flow_done    = False  # 41+達成後にLOOP+1を達成したか
+    g.marvelous_loop_base    = -1    # MARVELOUS カウンター起動時のLOOP値
+
+
+def update_marvelous_on_place(g, adj):
+    """石を置いた後にMARVELOUSカウンターを更新する。
+    _place_stone から、石を配置・消去した後に呼ぶ。
+    adj: WAYの方向数（0=WAYなし）
+    """
+    stone_count = count_board_stones(g)
+
+    # 40個以上でカウンター起動（未起動時のみ）
+    if stone_count >= 40 and not g.marvelous_40_reached:
+        g.marvelous_40_reached = True
+        g.marvelous_loop_base  = g.loop_count
+
+    # 41個以上でFLOW条件のベースラインを記録
+    if stone_count >= 41 and not g.marvelous_41_reached:
+        g.marvelous_41_reached = True
+
+    # 4WAY達成: 40+起動済みの時にカウント
+    if adj == 4 and g.marvelous_40_reached:
+        g.marvelous_4way_done = True
+
+    # 39以下でLOOP+1 → カウンターリセット判定は update_marvelous_on_loop で行う
+
+
+def update_marvelous_on_loop(g):
+    """LOOPカウントが上がった時にMARVELOUSカウンターを更新する。
+    _endless_draw_next_stone のLOOP+1処理から呼ぶ。
+    """
+    stone_count = count_board_stones(g)
+
+    # FLOW達成チェック: 41+達成済みかつLOOP+1
+    # 40個+1でLOOP+1同時発生（stone_count>=40）もセーフ
+    if g.marvelous_41_reached and stone_count >= 40:
+        g.marvelous_flow_done = True
+
+    # 39以下のままLOOP+1 → カウンターリセット
+    if stone_count < 40:
+        # ただし 39+1 でLOOP+1同時（stone_count==40）はセーフなので除外済み
+        g.marvelous_40_reached = False
+        g.marvelous_41_reached = False
+        g.marvelous_4way_done  = False
+        g.marvelous_flow_done  = False
+        g.marvelous_loop_base  = -1
+
+
+def get_marvelous_rank(g):
+    """STALEMATE時に表示するMARVELOUSの称号を返す。
+    条件が成立していない場合は None を返す。
+    優先度: FLOW > MONSTER > HARMONY
+    """
+    if not g.marvelous_40_reached:
+        return None
+
+    if g.marvelous_flow_done:
+        return "FLOW"
+    if g.marvelous_4way_done:
+        return "MONSTER"
+    return "HARMONY"

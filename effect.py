@@ -43,6 +43,10 @@ class EffectManager:
         # JOKER rescue フラグ（JOKER残りで STALEMATE した場合）
         self.is_joker_rescue      = False
 
+        # MARVELOUS フラグ（ENDLESS MODE 専用）
+        # None / "HARMONY" / "MONSTER" / "FLOW"
+        self.marvelous_rank       = None
+
         # 全消しボーナスシーケンス
         self.board_clear_active   = False
         self.board_clear_timer    = 0
@@ -85,15 +89,18 @@ class EffectManager:
         self.result_timer   = 0
         self.firework_count = 0
 
-    def trigger_stalemate(self, is_initial=False, is_joker_rescue=False):
+    def trigger_stalemate(self, is_initial=False, is_joker_rescue=False,
+                           marvelous_rank=None):
         """STALEMATE 演出を開始する。
         is_initial=True      : 初手詰まり扱いで自動リスタートへ遷移する。
         is_joker_rescue=True : JOKER残りで詰まった場合。[J] or [R] を促す。
+        marvelous_rank       : "HARMONY" / "MONSTER" / "FLOW" / None
         """
         self.is_stalemate         = True
         self.is_victory           = False
         self.is_initial_stalemate = is_initial
         self.is_joker_rescue      = is_joker_rescue
+        self.marvelous_rank       = marvelous_rank
         self.result_timer         = 0
 
     def trigger_path_sequence(self):
@@ -206,7 +213,10 @@ class EffectManager:
         if self.is_victory:
             self._draw_victory_sequence(stats, left, loop, joker, is_endless)
         if self.is_stalemate:
-            self._draw_stalemate(stats, left, loop, joker, is_endless)
+            if self.marvelous_rank:
+                self._draw_marvelous(stats, left, loop=loop, joker=joker)
+            else:
+                self._draw_stalemate(stats, left, loop=loop, joker=joker, is_endless=is_endless)
         if self.path_sequence_active:
             self._draw_path_sequence()
         if self.board_clear_active:
@@ -373,6 +383,70 @@ class EffectManager:
         t_col = 1 if (104 <= mx <= 140 and 177 <= my <= 187) else 7
         pyxel.text(104, 162, "[G] GO AGAIN", g_col)
         pyxel.text(104, 177, "[T] TITLE",    t_col)
+
+    # サブメッセージ（称号ごとに異なる隠し演出）
+    _MARVELOUS_MSGS = {
+        "HARMONY": "THE BOARD IS FULL OF HARMONY.",
+        "MONSTER": "MASTER OF CREATION AND DESTRUCTION.",
+        "FLOW":    "THE FLOW NEVER ENDS.",
+    }
+
+    def _draw_marvelous(self, stats, left, loop=0, joker=0):
+        """MARVELOUS! 演出を描画する（ENDLESS MODE 専用）。
+        レイアウト（帯 y=100〜159）:
+          timer <  60 : "MARVELOUS!" が 赤↔白 で点滅
+          timer >= 60 : 点滅終了、サブメッセージ出現
+          timer >= 90 : stats行 (4WAY/LOOP/JOKER)
+          timer >= 120: [R] RELOAD / [U] UNDO
+        """
+        if self.path_sequence_active:
+            return
+
+        pyxel.rect(0, 100, 256, 60, 8)
+        pyxel.line(0, 100, 255, 100, 9)
+        pyxel.line(0, 159, 255, 159, 2)
+
+        # "MARVELOUS!" の点滅（timer < 60）→ 白で固定（timer >= 60）
+        if self.result_timer < 60:
+            blink     = (self.result_timer // 8) % 2
+            title_col = 10 if blink == 0 else 12   # 赤↔黄
+        else:
+            title_col = 1  # 白で固定
+
+        # センタリング: "MARVELOUS!" = 10文字 × 4px = 40px → x=108
+        pyxel.text(108, 108, "MARVELOUS!", title_col)
+
+        if self.result_timer >= 60:
+            # サブメッセージ（称号ごと）
+            msg = self._MARVELOUS_MSGS.get(self.marvelous_rank, "")
+            if msg:
+                x_msg = (256 - len(msg) * 4) // 2
+                pyxel.text(x_msg, 120, msg, 7)
+
+        if self.result_timer >= 90:
+            # stats 行
+            line1 = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02}"
+            line2 = f"LOOP:{loop} & JOKER:{joker}"
+            x1 = (256 - len(line1) * 4) // 2
+            x2 = (256 - len(line2) * 4) // 2
+            pyxel.text(x1, 132, line1, 5)
+            pyxel.text(x2, 141, line2, 5)
+
+        if self.result_timer >= 120 and not self.is_joker_rescue:
+            # [R] RELOAD / [U] UNDO
+            mx, my = pyxel.mouse_x, pyxel.mouse_y
+            r_col = 1 if (88 <= mx <= 124 and 151 <= my <= 159) else 7
+            u_col = 1 if (132 <= mx <= 168 and 151 <= my <= 159) else 7
+            pyxel.text( 88, 153, "[R] RELOAD", r_col)
+            pyxel.text(132, 153, "[U] UNDO",   u_col)
+
+        # JOKER rescue
+        if self.result_timer >= 60 and self.is_joker_rescue and joker > 0:
+            mx, my = pyxel.mouse_x, pyxel.mouse_y
+            j_col = 12 if (72 <= mx <= 120 and 151 <= my <= 159) else 1
+            r_col = 12 if (130 <= mx <= 178 and 151 <= my <= 159) else 1
+            pyxel.text( 72, 153, "[J] USE JOKER", j_col)
+            pyxel.text(130, 153, "[R] GIVE UP",   r_col)
 
     def _draw_board_clear_bonus(self):
         """全消しボーナスシーケンスを描画する。
