@@ -156,7 +156,7 @@ def handle_result(g, mx, my):
                 g.joker_panel_open     = True
                 return
             if give_up:
-                g.restart_game(); return
+                g.effects.trigger_path_sequence(); return
 
         # MARVELOUS / 通常STALEMATE のアクション入力処理
         # ボックス座標をリアルタイム計算して使用
@@ -204,7 +204,7 @@ def handle_result(g, mx, my):
                 g.joker_panel_open     = True
                 return
             if give_up:
-                g.restart_game(); return
+                g.effects.trigger_path_sequence(); return
 
         # MARVELOUS / 通常STALEMATE のアクション入力処理
         # ボックス座標をリアルタイム計算して使用
