@@ -9,7 +9,7 @@ class EffectManager:
       - 2WAY / 3WAY 線エフェクト（時計回りに「シュパッ」と走る）
       - 勝利演出（CONGRATULATIONS! フェードイン）
       - STALEMATE 演出
-      - ISHIDO MODE 専用「THE PATH」シーケンス
+      - 全モード共通「THE PATH」シーケンス
     """
 
     # 線エフェクトのパラメータ
@@ -37,7 +37,6 @@ class EffectManager:
         # THE PATH シーケンス
         self.path_sequence_active = False
         self.path_timer           = 0
-        self.path_phase           = 0   # 1: 1行目表示中, 2: 2行目表示中
         self.path_done            = False
 
         # JOKER rescue フラグ（JOKER残りで STALEMATE した場合）
@@ -104,10 +103,9 @@ class EffectManager:
         self.result_timer         = 0
 
     def trigger_path_sequence(self):
-        """ISHIDO MODE STALEMATE 時、[R] 押下で発動するリロード前演出を開始する。"""
+        """全モード共通: STALEMATE 時、[R] 押下で発動するリロード前演出を開始する。"""
         self.path_sequence_active = True
         self.path_timer           = 0
-        self.path_phase           = 1
         self.path_done            = False
 
     def trigger_dissolve(self, stones_data):
@@ -176,10 +174,8 @@ class EffectManager:
 
         if self.path_sequence_active:
             self.path_timer += 1
-            if self.path_phase == 1 and self.path_timer >= 70:
-                self.path_phase = 2
-                self.path_timer = 0
-            elif self.path_phase == 2 and self.path_timer >= 80:
+            # 約1.5秒（90フレーム）で即座に完了
+            if self.path_timer >= 90:
                 self.path_sequence_active = False
                 self.path_done            = True
 
@@ -304,45 +300,64 @@ class EffectManager:
             self._draw_result_overlay(stats, left, loop, joker, is_endless)
 
     def _draw_stalemate(self, stats, left, loop=0, joker=0, is_endless=False):
-        """STALEMATE 演出を描画する。THE PATH シーケンス中は非表示。
-        ENDLESS MODE のみリザルトを2行表示する。
-        レイアウト（帯 y=100〜159）:
-          y=108 STALEMATE
-          y=122 4WAY=00 3WAY=00 2WAY=00
-          y=132 LEFT:00 LOOP:0 & JOKER:0  ← ENDLESS のみ
-        """
+        """STALEMATE をボックス型で描画する。"""
         if self.path_sequence_active:
             return
 
-        pyxel.rect(0, 100, 256, 60, 8)
-        pyxel.line(0, 100, 255, 100, 9)
-        pyxel.line(0, 159, 255, 159, 2)
+        mx, my = pyxel.mouse_x, pyxel.mouse_y
 
-        if self.result_timer < 60:
-            blink    = (self.result_timer // 10) % 2
-            text_col = 10 if blink == 0 else 7
-        else:
-            text_col = 1
-        pyxel.text(110, 108, "STALEMATE", text_col)
-
+        # 行リスト構築
         if not self.is_initial_stalemate and self.result_timer > 60:
             if is_endless:
-                line1 = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02}"
-                line2 = f"LEFT:{left:02} LOOP:{loop} & JOKER:{joker}"
-                pyxel.text(82, 119, line1, 1)
-                pyxel.text(80, 129, line2, 1)
-                # JOKER rescue: マウスホバーで色変化
-                if self.is_joker_rescue and joker > 0:
-                    mx, my = pyxel.mouse_x, pyxel.mouse_y
-                    # [J] USE JOKER: 9文字×4=36px → x=72〜108
-                    # [R] GIVE UP:   9文字×4=36px → x=148〜184（スペース区切り）
-                    j_col = 12 if (72 <= mx <= 120 and 139 <= my <= 149) else 1
-                    r_col = 12 if (130 <= mx <= 178 and 139 <= my <= 149) else 1
-                    pyxel.text( 72, 141, "[J] USE JOKER", j_col)
-                    pyxel.text(130, 141, "[R] GIVE UP",   r_col)
+                l1 = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02}"
+                l2 = f"LEFT:{left:02} LOOP:{loop} & JOKER:{joker}"
+                stat_lines = [(l1,1),(l2,1)]
             else:
                 res = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02} LEFT:{left:02}"
-                pyxel.text(70, 128, res, 1)
+                stat_lines = [(res,1)]
+            if is_endless and self.is_joker_rescue and joker > 0:
+                act = [("[J] USE JOKER  [R] GIVE UP", self._COL_NORMAL)]
+            else:
+                act = [("[R] RELOAD", self._COL_NORMAL)]
+            all_lines = [("STALEMATE",1)] + stat_lines + act
+        else:
+            all_lines = [("STALEMATE",1)]
+
+        bx, by, bw, bh = self._calc_box(all_lines)
+        self._draw_box_frame(bx, by, bw, bh)
+
+        # 0行目: STALEMATE (点滅)
+        if self.result_timer < 60:
+            blink = (self.result_timer // 10) % 2
+            tc    = 10 if blink == 0 else 7
+        else:
+            tc = 1
+        pyxel.text(self._tx("STALEMATE"), self._ly(by, 0), "STALEMATE", tc)
+
+        if self.is_initial_stalemate or self.result_timer <= 60:
+            return
+
+        # stats行（timer>60で表示済み）
+        for i, (t, c) in enumerate(stat_lines, start=1):
+            pyxel.text(self._tx(t), self._ly(by, i), t, c)
+
+        # アクション行（1回だけ描画・ホバー対応）
+        ai   = 1 + len(stat_lines)
+        ty_a = self._ly(by, ai)
+        if is_endless and self.is_joker_rescue and joker > 0:
+            j_t = "[J] USE JOKER"
+            r_t = "[R] GIVE UP"
+            jx  = self._tx("[J] USE JOKER  [R] GIVE UP")
+            rx  = jx + len("[J] USE JOKER  ") * 4
+            jc  = self._COL_HOVER if self._is_hover(mx,my,jx,ty_a,j_t) else self._COL_NORMAL
+            rc  = self._COL_HOVER if self._is_hover(mx,my,rx,ty_a,r_t) else self._COL_NORMAL
+            pyxel.text(jx, ty_a, j_t, jc)
+            pyxel.text(rx, ty_a, r_t, rc)
+        else:
+            r_t = "[R] RELOAD"
+            rx  = self._tx(r_t)
+            rc  = self._COL_HOVER if self._is_hover(mx,my,rx,ty_a,r_t) else self._COL_NORMAL
+            pyxel.text(rx, ty_a, r_t, rc)
 
     def _draw_result_overlay(self, stats, left, loop=0, joker=0, is_endless=False):
         """ゲームクリア画面のリザルトとボタンを描画する。
@@ -360,24 +375,21 @@ class EffectManager:
         if is_endless:
             line1 = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02}"
             line2 = f"LOOP:{loop} & JOKER:{joker}"
-            
+
             # 文字数からx座標を自動計算して完全センタリング
             x1 = (256 - len(line1) * 4) // 2
             x2 = (256 - len(line2) * 4) // 2
-            
+
             # 修正: 固定の数字ではなく、計算した変数 x1, x2 を渡す！
-            pyxel.text(x1, 135, line1, 7)
-            pyxel.text(x2, 145, line2, 7)
+            pyxel.text(x1, 135, line1, 1)
+            pyxel.text(x2, 145, line2, 1)
         else:
-            # ALL WAYS / ISHIDO+ 用
             if left > 0:
-                # STALEMATE時など、石が残っている場合はLEFTを表示
                 res = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02} LEFT:{left:02}"
-                pyxel.text(70, 140, res, 7)
+                pyxel.text(70, 140, res, 1)
             else:
-                # クリア時（leftが0）はLEFTを非表示にし、少し右にずらしてセンタリング
                 res = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02}"
-                pyxel.text(86, 140, res, 7)
+                pyxel.text(86, 140, res, 1)
         mx, my = pyxel.mouse_x, pyxel.mouse_y
         g_col = 1 if (104 <= mx <= 152 and 162 <= my <= 172) else 7
         t_col = 1 if (104 <= mx <= 140 and 177 <= my <= 187) else 7
@@ -386,115 +398,158 @@ class EffectManager:
 
     # サブメッセージ（称号ごとに異なる隠し演出）
     _MARVELOUS_MSGS = {
-        "HARMONY": "THE BOARD IS FULL OF HARMONY.",
-        "MONSTER": "MASTER OF CREATION AND DESTRUCTION.",
-        "FLOW":    "THE FLOW NEVER ENDS.",
+        "HARMONY": ("THE BOARD IS FULL OF HARMONY.",       13),  # 緑
+        "MONSTER": ("MASTER OF CREATION AND DESTRUCTION.", 14),  # ピンク
+        "FLOW":    ("THE FLOW NEVER ENDS.",                11),  # 青
     }
 
+    # ボックス共通定数
+    _BOX_TOP   = 100   # 上辺（固定）
+    _BOX_MIN_W = 144   # 最小幅（col2〜col10）
+    _BOX_MG_Y  = 9     # 上下マージン
+    _BOX_LINE_H= 11    # 行高（テキスト4px + 間隔7px）
+    _BOX_CX    = 128   # 中央x
+
+    # ホバー色定数（全ダイアログ共通）
+    _COL_NORMAL = 5    # 濃いグレー（非ホバー時）
+    _COL_HOVER  = 0    # 黒（ホバー時）
+
+    def _calc_box(self, lines):
+        """行リストからボックス座標を計算して返す (bx, by, bw, bh)。"""
+        max_w = max((len(t)*4 for t,_ in lines), default=0) + 16
+        bw    = max(max_w, self._BOX_MIN_W)
+        bh    = self._BOX_MG_Y + len(lines)*self._BOX_LINE_H + self._BOX_MG_Y
+        bx    = self._BOX_CX - bw//2
+        return bx, self._BOX_TOP, bw, bh
+
+    def _draw_box_frame(self, bx, by, bw, bh):
+        """ボックスの枠だけを描画する（テキストは描かない）。"""
+        pyxel.rect(bx,   by,   bw,   bh,   2)
+        pyxel.rect(bx,   by,   bw-2, bh-2, 9)
+        pyxel.rect(bx+2, by+2, bw-4, bh-4, 8)
+
+    def _ly(self, by, i):
+        """i行目のy座標を返す。"""
+        return by + self._BOX_MG_Y + i * self._BOX_LINE_H
+
+    def _tx(self, text):
+        """テキストを中央揃えにするx座標を返す。"""
+        return self._BOX_CX - len(text)*2
+
+    def _is_hover(self, mx, my, tx, ty, text):
+        """テキスト上にマウスがあるか判定する。"""
+        return tx <= mx <= tx + len(text)*4 and ty <= my <= ty + 4
+
     def _draw_marvelous(self, stats, left, loop=0, joker=0):
-        """MARVELOUS! 演出を描画する（ENDLESS MODE 専用）。
-        レイアウト（帯 y=100〜159）:
-          timer <  60 : "MARVELOUS!" が 赤↔白 で点滅
-          timer >= 60 : 点滅終了、サブメッセージ出現
-          timer >= 90 : stats行 (4WAY/LOOP/JOKER)
-          timer >= 120: [R] RELOAD / [U] UNDO
+        """MARVELOUS! 演出をボックス型で描画する（ENDLESS MODE 専用）。
+        timer <  60 : "MARVELOUS!" が赤↔黄で点滅
+        timer >= 60 : サブメッセージ出現
+        timer >= 90 : stats行出現
+        timer >= 120: アクション行出現
         """
         if self.path_sequence_active:
             return
 
-        pyxel.rect(0, 100, 256, 60, 8)
-        pyxel.line(0, 100, 255, 100, 9)
-        pyxel.line(0, 159, 255, 159, 2)
+        mx, my  = pyxel.mouse_x, pyxel.mouse_y
+        msg_txt, msg_col = self._MARVELOUS_MSGS.get(self.marvelous_rank, ("", 1))
+        l1 = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02}"
+        l2 = f"LOOP:{loop} & JOKER:{joker}"
 
-        # "MARVELOUS!" の点滅（timer < 60）→ 白で固定（timer >= 60）
-        if self.result_timer < 60:
-            blink     = (self.result_timer // 8) % 2
-            title_col = 10 if blink == 0 else 12   # 赤↔黄
+        # 最終行リストを構築（座標計算用）
+        base_lines = [("MARVELOUS!", 1)]
+        if msg_txt:           base_lines.append((msg_txt, msg_col))
+        base_lines += [(l1,1),(l2,1)]
+        if self.is_joker_rescue:
+            act_txt = "[J] USE JOKER  [R] GIVE UP"
+            act_lines = [(act_txt, self._COL_NORMAL)]
         else:
-            title_col = 1  # 白で固定
+            act_lines = [("[R] RELOAD   [U] UNDO", self._COL_NORMAL)]
+        all_lines = base_lines + act_lines
 
-        # センタリング: "MARVELOUS!" = 10文字 × 4px = 40px → x=108
-        pyxel.text(108, 108, "MARVELOUS!", title_col)
+        bx, by, bw, bh = self._calc_box(all_lines)
+        self._draw_box_frame(bx, by, bw, bh)
 
-        if self.result_timer >= 60:
-            # サブメッセージ（称号ごと）
-            msg = self._MARVELOUS_MSGS.get(self.marvelous_rank, "")
-            if msg:
-                x_msg = (256 - len(msg) * 4) // 2
-                pyxel.text(x_msg, 120, msg, 7)
+        # 0行目: MARVELOUS! (点滅)
+        if self.result_timer < 60:
+            blink = (self.result_timer // 8) % 2
+            t_col = 10 if blink == 0 else 12
+        else:
+            t_col = 1
+        pyxel.text(self._tx("MARVELOUS!"), self._ly(by, 0), "MARVELOUS!", t_col)
 
-        if self.result_timer >= 90:
-            # stats 行
-            line1 = f"4WAY={stats['4WAY']:02} 3WAY={stats['3WAY']:02} 2WAY={stats['2WAY']:02}"
-            line2 = f"LOOP:{loop} & JOKER:{joker}"
-            x1 = (256 - len(line1) * 4) // 2
-            x2 = (256 - len(line2) * 4) // 2
-            pyxel.text(x1, 132, line1, 5)
-            pyxel.text(x2, 141, line2, 5)
+        if self.result_timer < 60:
+            return  # 点滅中はここまで
 
-        if self.result_timer >= 120 and not self.is_joker_rescue:
-            # [R] RELOAD / [U] UNDO
-            mx, my = pyxel.mouse_x, pyxel.mouse_y
-            r_col = 1 if (88 <= mx <= 124 and 151 <= my <= 159) else 7
-            u_col = 1 if (132 <= mx <= 168 and 151 <= my <= 159) else 7
-            pyxel.text( 88, 153, "[R] RELOAD", r_col)
-            pyxel.text(132, 153, "[U] UNDO",   u_col)
+        # 1行目: サブメッセージ
+        if msg_txt:
+            pyxel.text(self._tx(msg_txt), self._ly(by, 1), msg_txt, msg_col)
+            si = 2  # stats開始行
+        else:
+            si = 1
 
-        # JOKER rescue
-        if self.result_timer >= 60 and self.is_joker_rescue and joker > 0:
-            mx, my = pyxel.mouse_x, pyxel.mouse_y
-            j_col = 12 if (72 <= mx <= 120 and 151 <= my <= 159) else 1
-            r_col = 12 if (130 <= mx <= 178 and 151 <= my <= 159) else 1
-            pyxel.text( 72, 153, "[J] USE JOKER", j_col)
-            pyxel.text(130, 153, "[R] GIVE UP",   r_col)
+        if self.result_timer < 90:
+            return
+
+        # stats行
+        pyxel.text(self._tx(l1), self._ly(by, si),   l1, 1)
+        pyxel.text(self._tx(l2), self._ly(by, si+1), l2, 1)
+
+        if self.result_timer < 120:
+            return
+
+        # アクション行（ホバー対応・1回だけ描画）
+        ai = si + 2
+        ty_a = self._ly(by, ai)
+        if self.is_joker_rescue and joker > 0:
+            j_t = "[J] USE JOKER"
+            r_t = "[R] GIVE UP"
+            jx  = self._tx("[J] USE JOKER  [R] GIVE UP")
+            rx  = jx + len("[J] USE JOKER  ") * 4
+            jc  = self._COL_HOVER if self._is_hover(mx,my,jx,ty_a,j_t) else self._COL_NORMAL
+            rc  = self._COL_HOVER if self._is_hover(mx,my,rx,ty_a,r_t) else self._COL_NORMAL
+            pyxel.text(jx, ty_a, j_t, jc)
+            pyxel.text(rx, ty_a, r_t, rc)
+        else:
+            r_t = "[R] RELOAD"
+            u_t = "[U] UNDO"
+            tx_r = self._tx("[R] RELOAD   [U] UNDO")
+            tx_u = tx_r + len("[R] RELOAD   ") * 4
+            rc = self._COL_HOVER if self._is_hover(mx,my,tx_r,ty_a,r_t) else self._COL_NORMAL
+            uc = self._COL_HOVER if self._is_hover(mx,my,tx_u,ty_a,u_t) else self._COL_NORMAL
+            pyxel.text(tx_r, ty_a, r_t, rc)
+            pyxel.text(tx_u, ty_a, u_t, uc)
+
+    def _draw_path_sequence(self):
+        """全モード共通：THE PATH メッセージをボックス型で描画する（1.5秒同時出し）。"""
+        lines = [("THE PATH GOES ON...",          1),
+                 ("EVERY STONE, A STEP FORWARD.", 1)]
+        bx, by, bw, bh = self._calc_box(lines)
+        self._draw_box_frame(bx, by, bw, bh)
+
+        # 最初の数フレームだけ赤(8)でフワッと表示し、すぐ白(1)に
+        col = 1 if self.path_timer > 5 else 8
+        pyxel.text(self._tx("THE PATH GOES ON..."),
+                   self._ly(by, 0), "THE PATH GOES ON...", col)
+        pyxel.text(self._tx("EVERY STONE, A STEP FORWARD."),
+                   self._ly(by, 1), "EVERY STONE, A STEP FORWARD.", col)
 
     def _draw_board_clear_bonus(self):
-        """全消しボーナスシーケンスを描画する。
-        テキストセンタリング:
-          "THE BOARD IS YOURS!!"       21文字 × 4px = 84px → x = 86
-          "A JOKER JOINS YOUR JOURNEY." 28文字 × 4px = 112px → x = 72
-        フェーズ:
-          0〜59f  : 「THE BOARD IS YOURS!!」白(1)↔黄(12)で点滅
-          60f〜   : 白(1)で静止
-          90f〜   : 「A JOKER JOINS YOUR JOURNEY.」が黄(12)で出現
-        """
+        """全消しボーナスシーケンスをボックス型で描画する。"""
         t = self.board_clear_timer
+        lines = [("THE BOARD IS YOURS!!", 1)]
+        if t >= 90:
+            lines.append(("A JOKER JOINS YOUR JOURNEY.", 12))
 
-        # 帯（THE PATH / STALEMATE と同じスタイル）
-        pyxel.rect(0, 100, 256, 60, 8)
-        pyxel.line(0, 100, 255, 100, 9)
-        pyxel.line(0, 159, 255, 159, 2)
+        bx, by, bw, bh = self._calc_box(lines)
+        self._draw_box_frame(bx, by, bw, bh)
 
         # 1行目: 点滅 → 白で静止
         if t < 60:
             col1 = 1 if (t // 10) % 2 == 0 else 12  # 白↔黄
         else:
             col1 = 1
-        pyxel.text(86, 112, "THE BOARD IS YOURS!!", col1)
+        pyxel.text(self._tx("THE BOARD IS YOURS!!"), self._ly(by, 0), "THE BOARD IS YOURS!!", col1)
 
         # 2行目: 90f 以降に黄色で出現
         if t >= 90:
-            pyxel.text(72, 128, "A JOKER JOINS YOUR JOURNEY.", 12)
-
-    def _draw_path_sequence(self):
-        """ISHIDO MODE 専用：リロード前の「THE PATH」メッセージを描画する。
-
-        デザインコンセプト: 灰色の石に白文字が刻み込まれたイメージ。
-        テキストのセンタリング:
-          "THE PATH GOES ON..."          19文字 × 4px = 76px → x = 90
-          "EVERY STONE, A STEP FORWARD." 29文字 × 4px = 116px → x = 70
-        """
-        # 灰色帯で STALEMATE 表示を覆う（ゲーム背景と同色系）
-        pyxel.rect(0, 100, 256, 60, 8)
-        pyxel.line(0, 100, 255, 100, 9)   # 上辺ハイライト
-        pyxel.line(0, 159, 255, 159, 2)   # 下辺影（立体感）
-
-        # 1行目: THE PATH GOES ON...（10フレーム後に白で出現）
-        if self.path_phase >= 1:
-            col1 = 1 if self.path_timer > 10 else 8
-            pyxel.text(90, 112, "THE PATH GOES ON...", col1)
-
-        # 2行目: EVERY STONE...（10フレーム後にやや暗い白で添える）
-        if self.path_phase >= 2:
-            col2 = 1 if self.path_timer > 10 else 8
-            pyxel.text(70, 128, "EVERY STONE, A STEP FORWARD.", col2)
+            pyxel.text(self._tx("A JOKER JOINS YOUR JOURNEY."), self._ly(by, 1), "A JOKER JOINS YOUR JOURNEY.", 12)

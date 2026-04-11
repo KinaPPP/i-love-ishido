@@ -15,6 +15,38 @@ from constants import (
     MODE_ENDLESS, HINT_CYCLE, HINT_ACTIVE_FRAMES,
 )
 
+# ------------------------------------------------------------------ #
+#  メッセージボックス共通ヘルパー（effect.py と同じ設計）
+# ------------------------------------------------------------------ #
+_BOX_TOP   = 100
+_BOX_MG_Y  = 9
+_LINE_H    = 11
+_MIN_BW    = 144
+_BOX_CX    = 128
+_COL_N     = 5   # 通常（濃いグレー）
+_COL_H     = 0   # ホバー（黒）
+
+def _calc_box(lines):
+    max_w = max((len(t)*4 for t,_ in lines), default=0) + 16
+    bw    = max(max_w, _MIN_BW)
+    bh    = _BOX_MG_Y + len(lines)*_LINE_H + _BOX_MG_Y
+    bx    = _BOX_CX - bw//2
+    return bx, _BOX_TOP, bw, bh
+
+def _draw_frame(bx, by, bw, bh):
+    pyxel.rect(bx,   by,   bw,   bh,   2)
+    pyxel.rect(bx,   by,   bw-2, bh-2, 9)
+    pyxel.rect(bx+2, by+2, bw-4, bh-4, 8)
+
+def _ly(by, i):
+    return by + _BOX_MG_Y + i * _LINE_H
+
+def _tx(text):
+    return _BOX_CX - len(text) * 2
+
+def _hover(mx, my, tx, ty, text):
+    return tx <= mx <= tx + len(text)*4 and ty <= my <= ty + 4
+
 
 # ------------------------------------------------------------------ #
 #  盤面・メイン描画
@@ -120,45 +152,72 @@ def draw_x_button(g):
 
 
 def draw_confirm_title():
-    """タイトルへ戻る確認ダイアログを描画する。"""
-    pyxel.rect(0, 100, 256, 60, 8)
-    pyxel.line(0, 100, 255, 100, 9)
-    pyxel.line(0, 159, 255, 159, 2)
-    pyxel.text(96, 112, "RETURN TO TITLE?", 1)
+    """タイトルへ戻る確認ダイアログをボックス型で描画する。"""
+    lines = [("RETURN TO TITLE?", 1),
+             ("[Y] YES   [N] NO", _COL_N)]
+    bx, by, bw, bh = _calc_box(lines)
+    _draw_frame(bx, by, bw, bh)
+    pyxel.text(_tx("RETURN TO TITLE?"), _ly(by, 0), "RETURN TO TITLE?", 1)
     mx, my = pyxel.mouse_x, pyxel.mouse_y
-    y_col = 0 if (88 <= mx <= 120 and 126 <= my <= 136) else 5
-    n_col = 0 if (132 <= mx <= 164 and 126 <= my <= 136) else 5
-    pyxel.text( 88, 128, "[Y] YES", y_col)
-    pyxel.text(132, 128, "[N] NO",  n_col)
+    y_t  = "[Y] YES"
+    n_t  = "[N] NO"
+    tx_a = _tx("[Y] YES   [N] NO")
+    tx_n = tx_a + len("[Y] YES   ") * 4
+    ty_a = _ly(by, 1)
+    yc   = _COL_H if _hover(mx,my,tx_a,ty_a,y_t) else _COL_N
+    nc   = _COL_H if _hover(mx,my,tx_n,ty_a,n_t) else _COL_N
+    pyxel.text(tx_a, ty_a, y_t, yc)
+    pyxel.text(tx_n, ty_a, n_t, nc)
 
 
 def draw_joker_panel():
-    """ジョーカー石の COLOR / NUMBER 選択パネルを描画する。"""
-    pyxel.rect(0, 100, 256, 60, 8)
-    pyxel.line(0, 100, 255, 100, 9)
-    pyxel.line(0, 159, 255, 159, 2)
-    pyxel.text(96, 108, "USE JOKER STONE:", 1)
+    """ジョーカー石の COLOR / NUMBER 選択パネルをボックス型で描画する。
+    ホバー色: 黒(0) → 白(1)（JOKERパネル専用・視認性優先）
+    """
+    lines = [("USE JOKER STONE:", 1),
+             ("[C] COLOR  [N] NUMBER", _COL_N),
+             ("[B] BACK", _COL_N),
+             ("UNDO WILL CLEAR", 3)]
+    bx, by, bw, bh = _calc_box(lines)
+    _draw_frame(bx, by, bw, bh)
+    pyxel.text(_tx("USE JOKER STONE:"), _ly(by, 0), "USE JOKER STONE:", 1)
     mx, my = pyxel.mouse_x, pyxel.mouse_y
-    c_col = 0 if (72 <= mx <= 108 and 118 <= my <= 128) else 5
-    n_col = 0 if (144 <= mx <= 184 and 118 <= my <= 128) else 5
-    b_col = 0 if (112 <= mx <= 144 and 130 <= my <= 140) else 5
-    pyxel.text( 72, 120, "[C] COLOR",  c_col)
-    pyxel.text(144, 120, "[N] NUMBER", n_col)
-    pyxel.text(112, 132, "[B] BACK",   b_col)
-    pyxel.text( 98, 146, "UNDO WILL CLEAR", 3)
+    # 行1: [C] / [N]（ホバー: 黒→白）
+    c_t = "[C] COLOR"
+    n_t = "[N] NUMBER"
+    tx_cn = _tx("[C] COLOR  [N] NUMBER")
+    tx_n  = tx_cn + len("[C] COLOR  ") * 4
+    ty1   = _ly(by, 1)
+    cc = 1 if _hover(mx,my,tx_cn,ty1,c_t) else 0
+    nc = 1 if _hover(mx,my,tx_n, ty1,n_t) else 0
+    pyxel.text(tx_cn, ty1, c_t, cc)
+    pyxel.text(tx_n,  ty1, n_t, nc)
+    # 行2: [B] BACK
+    ty2  = _ly(by, 2)
+    tx_b = _tx("[B] BACK")
+    bc   = 1 if _hover(mx,my,tx_b,ty2,"[B] BACK") else 0
+    pyxel.text(tx_b, ty2, "[B] BACK", bc)
+    # 行3: UNDO WILL CLEAR（操作不可・暗い表示）
+    pyxel.text(_tx("UNDO WILL CLEAR"), _ly(by, 3), "UNDO WILL CLEAR", 3)
 
 
 def draw_confirm_reload():
-    """リロード確認ダイアログを描画する。"""
-    pyxel.rect(0, 100, 256, 60, 8)
-    pyxel.line(0, 100, 255, 100, 9)
-    pyxel.line(0, 159, 255, 159, 2)
-    pyxel.text(114, 112, "RELOAD?", 1)
+    """リロード確認ダイアログをボックス型で描画する。"""
+    lines = [("RELOAD?", 1),
+             ("[Y] YES   [N] NO", _COL_N)]
+    bx, by, bw, bh = _calc_box(lines)
+    _draw_frame(bx, by, bw, bh)
+    pyxel.text(_tx("RELOAD?"), _ly(by, 0), "RELOAD?", 1)
     mx, my = pyxel.mouse_x, pyxel.mouse_y
-    y_col = 0 if ( 96 <= mx <= 124 and 126 <= my <= 136) else 5
-    n_col = 0 if (128 <= mx <= 152 and 126 <= my <= 136) else 5
-    pyxel.text( 96, 128, "[Y] YES", y_col)
-    pyxel.text(128, 128, "[N] NO",  n_col)
+    y_t  = "[Y] YES"
+    n_t  = "[N] NO"
+    tx_a = _tx("[Y] YES   [N] NO")
+    tx_n = tx_a + len("[Y] YES   ") * 4
+    ty_a = _ly(by, 1)
+    yc   = _COL_H if _hover(mx,my,tx_a,ty_a,y_t) else _COL_N
+    nc   = _COL_H if _hover(mx,my,tx_n,ty_a,n_t) else _COL_N
+    pyxel.text(tx_a, ty_a, y_t, yc)
+    pyxel.text(tx_n, ty_a, n_t, nc)
 
 
 def draw_start_screen():

@@ -17,6 +17,34 @@ from constants import (
 )
 import game_logic as logic
 
+# ボックス座標ヘルパー（effect.py / ui.py と共通設計）
+_BOX_TOP  = 100
+_BOX_MG_Y = 9
+_LINE_H   = 11
+_MIN_BW   = 144
+_BOX_CX   = 128
+
+def _calc_box(lines):
+    max_w = max((len(t)*4 for t,_ in lines), default=0) + 16
+    bw    = max(max_w, _MIN_BW)
+    bh    = _BOX_MG_Y + len(lines)*_LINE_H + _BOX_MG_Y
+    bx    = _BOX_CX - bw//2
+    return bx, _BOX_TOP, bw, bh
+
+def _ly(by, i):
+    return by + _BOX_MG_Y + i * _LINE_H
+
+def _tx(text):
+    return _BOX_CX - len(text)*2
+
+def _box_action_y(lines):
+    """lines の最終行のy座標を返す。"""
+    _, by, _, _ = _calc_box(lines)
+    return _ly(by, len(lines)-1)
+
+def _is_hit(mx, my, tx, ty, text):
+    return tx <= mx <= tx+len(text)*4 and ty <= my <= ty+6
+
 
 # ------------------------------------------------------------------ #
 #  スタート画面
@@ -49,9 +77,13 @@ def handle_result(g, mx, my):
 
     # ✕ボタンによるタイトル確認ダイアログ
     if g.confirm_title:
+        ct_l = [("RETURN TO TITLE?",1),("[Y] YES   [N] NO",5)]
+        _, ct_by,_,_ = _calc_box(ct_l)
+        ty_ct= _ly(ct_by,1); tx_y=_tx("[Y] YES   [N] NO")
+        tx_n = tx_y+len("[Y] YES   ")*4
         if pyxel.btnp(pyxel.KEY_Y) or (
             pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
-            and 88 <= mx <= 120 and 126 <= my <= 136
+            and _is_hit(mx,my,tx_y,ty_ct,"[Y] YES")
         ):
             g.confirm_title = False
             g.game_state    = STATE_START
@@ -59,7 +91,7 @@ def handle_result(g, mx, my):
             return
         if pyxel.btnp(pyxel.KEY_N) or pyxel.btnp(pyxel.KEY_ESCAPE) or (
             pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
-            and 132 <= mx <= 164 and 126 <= my <= 136
+            and _is_hit(mx,my,tx_n,ty_ct,"[N] NO")
         ):
             g.confirm_title = False
         return
@@ -126,35 +158,140 @@ def handle_result(g, mx, my):
             if give_up:
                 g.restart_game(); return
 
-        # MARVELOUS画面専用の入力（timer>=120から受付）
-        if g.effects.marvelous_rank and g.effects.result_timer < 120:
-            return  # 演出中は入力ブロック
+        # MARVELOUS / 通常STALEMATE のアクション入力処理
+        # ボックス座標をリアルタイム計算して使用
+        is_marvelous = bool(g.effects.marvelous_rank)
 
-        is_reload = pyxel.btnp(pyxel.KEY_R) or (
+        if is_marvelous and g.effects.result_timer < 120:
+            return  # 演出中はブロック
+
+        # アクション行のy座標を計算
+        if is_marvelous:
+            msg_txt, _ = g.effects._MARVELOUS_MSGS.get(
+                g.effects.marvelous_rank, ("", 1))
+            base = [("MARVELOUS!", 1)]
+            if msg_txt: base.append((msg_txt, 5))
+            base += [("x"*23, 1), ("x"*18, 1)]  # stats2行
+            act_lines = base + [("x"*21, 5)]
+        else:
+            l1   = "x"*23
+            l2   = "LEFT:00 LOOP:0 & JOKER:0" if g.game_mode == MODE_ENDLESS else "x"
+            act  = "x"*26 if (g.game_mode==MODE_ENDLESS and g.effects.is_joker_rescue) else "x"*10
+            all_l = [("STALEMATE",1),(l1,1),(l2,1),(act,5)]
+            act_lines = all_l
+
+        ty_a = _box_action_y(act_lines)
+
+        # JOKER rescue 入力
+        if (g.game_mode == MODE_ENDLESS
+                and g.effects.is_joker_rescue
+                and g.joker_count > 0):
+            j_t = "[J] USE JOKER"
+            r_t = "[R] GIVE UP"
+            jx  = _tx("[J] USE JOKER  [R] GIVE UP")
+            rx  = jx + len("[J] USE JOKER  ")*4
+            use_joker = pyxel.btnp(pyxel.KEY_J) or (
+                pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                and (_is_hit(mx,my,jx,ty_a,j_t)
+                     or (g.btn_joker_x <= mx < g.btn_joker_x+g.btn_w
+                         and g.ui_row_y <= my < g.ui_row_y+g.btn_h))
+            )
+            give_up = (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                       and _is_hit(mx,my,rx,ty_a,r_t))
+            if use_joker:
+                g.game_state           = STATE_PLAYING
+                g.effects.is_stalemate = False
+                g.joker_panel_open     = True
+                return
+            if give_up:
+                g.restart_game(); return
+
+        # MARVELOUS / 通常STALEMATE のアクション入力処理
+        # ボックス座標をリアルタイム計算して使用
+        is_marvelous = bool(g.effects.marvelous_rank)
+
+        if is_marvelous and g.effects.result_timer < 120:
+            return  # 演出中はブロック
+
+        # アクション行のy座標を計算
+        if is_marvelous:
+            msg_txt, _ = g.effects._MARVELOUS_MSGS.get(
+                g.effects.marvelous_rank, ("", 1))
+            base = [("MARVELOUS!", 1)]
+            if msg_txt: base.append((msg_txt, 5))
+            base += [("x"*23, 1), ("x"*18, 1)]  # stats2行
+            act_lines = base + [("x"*21, 5)]
+        else:
+            if g.game_mode == MODE_ENDLESS:
+                l1 = "x"*23
+                l2 = "LEFT:00 LOOP:0 & JOKER:0"
+                stat_lines = [(l1, 1), (l2, 1)]
+            else:
+                res = "4WAY=00 3WAY=00 2WAY=00 LEFT:00"
+                stat_lines = [(res, 1)]
+
+            act  = "x"*26 if (g.game_mode==MODE_ENDLESS and g.effects.is_joker_rescue) else "x"*10
+            act_lines = [("STALEMATE", 1)] + stat_lines + [(act, 5)]
+
+        ty_a = _box_action_y(act_lines)
+
+        # JOKER rescue 入力
+        if (g.game_mode == MODE_ENDLESS
+                and g.effects.is_joker_rescue
+                and g.joker_count > 0):
+            j_t = "[J] USE JOKER"
+            r_t = "[R] GIVE UP"
+            jx  = _tx("[J] USE JOKER  [R] GIVE UP")
+            rx  = jx + len("[J] USE JOKER  ")*4
+            use_joker = pyxel.btnp(pyxel.KEY_J) or pyxel.btnp(pyxel.KEY_A) or (
+                pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                and (_is_hit(mx,my,jx,ty_a,j_t)
+                     or (g.btn_joker_x <= mx < g.btn_joker_x+g.btn_w
+                         and g.ui_row_y <= my < g.ui_row_y+g.btn_h))
+            )
+            give_up = (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                       and _is_hit(mx,my,rx,ty_a,r_t))
+            if use_joker:
+                g.game_state           = STATE_PLAYING
+                g.effects.is_stalemate = False
+                g.joker_panel_open     = True
+                return
+            if give_up:
+                g.effects.trigger_path_sequence(); return
+
+        # [R] RELOAD（MARVELOUSまたは通常STALEMATE共通）
+        r_t  = "[R] RELOAD"
+        if is_marvelous:
+            rx_r = _tx("[R] RELOAD   [U] UNDO")
+        else:
+            rx_r = _tx(r_t)
+
+        is_reload = pyxel.btnp(pyxel.KEY_R) or pyxel.btnp(pyxel.KEY_C) or (
             pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
-            and (g.btn_reload_x <= mx < g.btn_reload_x + g.btn_w
-                 and g.ui_row_y <= my < g.ui_row_y + g.btn_h
-                 # MARVELOUS帯内の[R] RELOAD テキスト
-                 or (g.effects.marvelous_rank
-                     and 88 <= mx <= 124 and 151 <= my <= 159))
+            and (_is_hit(mx, my, rx_r, ty_a, r_t)
+                 or (g.btn_reload_x <= mx < g.btn_reload_x+g.btn_w
+                     and g.ui_row_y <= my < g.ui_row_y+g.btn_h))
         )
         if is_reload:
-            if g.game_mode == MODE_ISHIDO and not g.effects.is_initial_stalemate:
+            if not g.effects.is_initial_stalemate:
                 g.effects.trigger_path_sequence()
             else:
                 g.restart_game()
+            return
 
+        # [U] UNDO
+        u_t  = "[U] UNDO"
+        tx_u = _tx("[R] RELOAD   [U] UNDO") + len("[R] RELOAD   ")*4
         is_undo = (
             pyxel.btnp(pyxel.KEY_U)
             or pyxel.btnp(pyxel.KEY_BACKSPACE)
+            or pyxel.btnp(pyxel.KEY_Z)
             or (g.undo_interval == 0 and (
                 pyxel.btnp(pyxel.MOUSE_BUTTON_RIGHT)
                 or (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
-                    and (g.btn_undo_x <= mx < g.btn_undo_x + g.btn_w
-                         and g.ui_row_y <= my < g.ui_row_y + g.btn_h
-                         # MARVELOUS帯内の[U] UNDO テキスト
-                         or (g.effects.marvelous_rank
-                             and 132 <= mx <= 168 and 151 <= my <= 159)))
+                    and (_is_hit(mx,my,tx_u,ty_a,u_t)
+                         or (g.btn_undo_x <= mx < g.btn_undo_x+g.btn_w
+                             and g.ui_row_y <= my < g.ui_row_y+g.btn_h)))
             ))
         )
         if is_undo:
@@ -171,16 +308,20 @@ def handle_playing(g, mx, my):
 
     # タイトル確認ダイアログ
     if g.confirm_title:
+        ct_l = [("RETURN TO TITLE?",1),("[Y] YES   [N] NO",5)]
+        _, ct_by,_,_ = _calc_box(ct_l)
+        ty_ct= _ly(ct_by,1); tx_y=_tx("[Y] YES   [N] NO")
+        tx_n = tx_y+len("[Y] YES   ")*4
         if pyxel.btnp(pyxel.KEY_Y) or (
             pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
-            and 88 <= mx <= 120 and 126 <= my <= 136
+            and _is_hit(mx,my,tx_y,ty_ct,"[Y] YES")
         ):
             g.confirm_title = False
             g.game_state    = STATE_START
             return
         if pyxel.btnp(pyxel.KEY_N) or pyxel.btnp(pyxel.KEY_ESCAPE) or (
             pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
-            and 132 <= mx <= 164 and 126 <= my <= 136
+            and _is_hit(mx,my,tx_n,ty_ct,"[N] NO")
         ):
             g.confirm_title = False
         return
@@ -195,6 +336,13 @@ def handle_playing(g, mx, my):
 
     # ジョーカーパネル操作
     if g.joker_panel_open:
+        # JOKERパネルのボックス座標計算
+        jp_l = [("USE JOKER STONE:",1),("[C] COLOR  [N] NUMBER",5),("[B] BACK",5),("UNDO WILL CLEAR",3)]
+        _, jp_by,_,_ = _calc_box(jp_l)
+        ty1 = _ly(jp_by,1); ty2 = _ly(jp_by,2)
+        tx_c = _tx("[C] COLOR  [N] NUMBER")
+        tx_n = tx_c + len("[C] COLOR  ")*4
+        tx_b = _tx("[B] BACK")
         if pyxel.btnp(pyxel.KEY_C):
             logic.activate_joker(g, "C")
         elif pyxel.btnp(pyxel.KEY_N):
@@ -202,9 +350,9 @@ def handle_playing(g, mx, my):
         elif pyxel.btnp(pyxel.KEY_B) or pyxel.btnp(pyxel.KEY_ESCAPE):
             logic.cancel_joker(g)
         elif pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT):
-            if   72 <= mx <= 108  and 118 <= my <= 128: logic.activate_joker(g, "C")
-            elif 144 <= mx <= 184 and 118 <= my <= 128: logic.activate_joker(g, "N")
-            elif 112 <= mx <= 144 and 130 <= my <= 140: logic.cancel_joker(g)
+            if   _is_hit(mx,my,tx_c,ty1,"[C] COLOR"):  logic.activate_joker(g,"C")
+            elif _is_hit(mx,my,tx_n,ty1,"[N] NUMBER"): logic.activate_joker(g,"N")
+            elif _is_hit(mx,my,tx_b,ty2,"[B] BACK"):   logic.cancel_joker(g)
         return
 
     # Jボタン（ENDLESS）
@@ -219,14 +367,18 @@ def handle_playing(g, mx, my):
 
     # リロード確認ダイアログ
     if g.confirm_reload:
+        cr_l = [("RELOAD?",1),("[Y] YES   [N] NO",5)]
+        _, cr_by,_,_ = _calc_box(cr_l)
+        ty_cr = _ly(cr_by,1); tx_y=_tx("[Y] YES   [N] NO")
+        tx_n  = tx_y+len("[Y] YES   ")*4
         if pyxel.btnp(pyxel.KEY_Y):
             g.confirm_reload = False; g.restart_game(); return
         if pyxel.btnp(pyxel.KEY_N) or pyxel.btnp(pyxel.KEY_ESCAPE):
             g.confirm_reload = False; input_active = True; return
         if pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT):
-            if  96 <= mx <= 124 and 126 <= my <= 136:
+            if _is_hit(mx,my,tx_y,ty_cr,"[Y] YES"):
                 g.confirm_reload = False; g.restart_game(); return
-            if 128 <= mx <= 152 and 126 <= my <= 136:
+            if _is_hit(mx,my,tx_n,ty_cr,"[N] NO"):
                 g.confirm_reload = False; input_active = True
         return
 

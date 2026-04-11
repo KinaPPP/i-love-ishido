@@ -200,6 +200,9 @@ class Ishido:
             return
 
         if self.game_state in [STATE_RESULT, STATE_STALEMATE]:
+            # デバッグキー[M]はRESULT/STALEMATE中でも受け付ける
+            if _DEBUG_ENABLED:
+                _debug.handle_debug_keys(self)
             inp.handle_result(self, mx, my)
             return
 
