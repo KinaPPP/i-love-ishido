@@ -149,6 +149,7 @@ class Ishido:
         self.joker_count = 1 if self.game_mode == MODE_ENDLESS else 0
 
         logic.init_marvelous(self)   # MARVELOUSフラグ初期化
+        logic.init_milestone()       # マイルストーン発動履歴をリセット
 
         self.game_state = STATE_PLAYING
 
@@ -199,7 +200,8 @@ class Ishido:
             inp.handle_start(self, mx, my)
             return
 
-        if self.game_state in [STATE_RESULT, STATE_STALEMATE]:
+        if (self.game_state in [STATE_RESULT, STATE_STALEMATE]
+                or self.effects.milestone_active):
             # デバッグキー[M]はRESULT/STALEMATE中でも受け付ける
             if _DEBUG_ENABLED:
                 _debug.handle_debug_keys(self)

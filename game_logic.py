@@ -172,6 +172,9 @@ def endless_draw_next_stone(g):
         g.joker_count += 2
         g.se.play_loop_and_joker(2)
         update_marvelous_on_loop(g)   # MARVELOUSカウンター更新
+
+        # カウンターストップ＋99演出トリガー
+        _check_milestone(g)
         return g.bag.pop()
     return None
 
@@ -189,6 +192,8 @@ def endless_board_clear_restart(g):
             g.board[y][x] = g.bag.pop()
     g.joker_count += 1
     g.se.play_joker_only(1)
+    # カウンターストップ＋99演出トリガー（全消しボーナスJOKER）
+    _check_milestone(g)
     # 手持ちがない場合のみ次の石を引く（JOKERで全消し時は saved_stone が残っている）
     if not g.current_stone:
         g.current_stone = endless_draw_next_stone(g)
@@ -398,3 +403,50 @@ def get_marvelous_rank(g):
     if g.marvelous_4way_done:
         return "MONSTER"
     return "HARMONY"
+
+
+# ------------------------------------------------------------------ #
+#  マイルストーン（LOOP:99 / JOKER:99）判定
+# ------------------------------------------------------------------ #
+
+# 内部フラグ: 一度発動したら再発動しないためのセット
+_milestone_triggered = set()   # "LOOP" / "JOKER"
+
+def init_milestone():
+    """マイルストーンの発動履歴をリセットする。restart_game 時に呼ぶ。"""
+    global _milestone_triggered
+    _milestone_triggered = set()
+
+def _check_milestone(g):
+    """LOOP/JOKERが99以上になっていたら演出を発動し、カウンターを99でストップ。
+    一度発動したら再度発動しない（_milestone_triggered で管理）。
+    """
+    global _milestone_triggered
+    from constants import STATE_STALEMATE  # 状態切り替え用
+
+    loop_hit  = g.loop_count  >= 99 and "LOOP"  not in _milestone_triggered
+    joker_hit = g.joker_count >= 99 and "JOKER" not in _milestone_triggered
+
+    # カウンターストップ
+    if g.loop_count  > 99: g.loop_count  = 99
+    if g.joker_count > 99: g.joker_count = 99
+
+    triggered = False
+
+    if loop_hit and joker_hit:
+        _milestone_triggered.add("LOOP")
+        _milestone_triggered.add("JOKER")
+        g.effects.trigger_milestone("BOTH")
+        triggered = True
+    elif loop_hit:
+        _milestone_triggered.add("LOOP")
+        g.effects.trigger_milestone("LOOP")
+        triggered = True
+    elif joker_hit:
+        _milestone_triggered.add("JOKER")
+        g.effects.trigger_milestone("JOKER")
+        triggered = True
+
+    # 演出が発動した場合は、強制的にSTALEMATE状態にして入力を受け付ける
+    if triggered:
+        g.game_state = STATE_STALEMATE

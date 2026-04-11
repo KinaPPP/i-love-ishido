@@ -51,6 +51,16 @@ class EffectManager:
         self.board_clear_timer    = 0
         self.board_clear_done     = False
 
+        # LOOP:99 / JOKER:99 演出
+        self.milestone_active     = False  # 演出中フラグ
+        self.milestone_timer      = 0
+        self.milestone_type       = None   # "LOOP" / "JOKER" / "BOTH"
+        self.milestone_phase      = 0      # 0=花火+メッセージ 1=YES/NO
+        self.milestone_done       = False  # 演出完了（resume or retire）
+        self.milestone_resume     = False  # True=続行 False=リタイア
+        # BOTH時: 1本目完了後に2本目へ
+        self.milestone_second     = False  # Trueなら2本目（JOKER）の演出中
+
     # ------------------------------------------------------------------ #
     #  トリガー
     # ------------------------------------------------------------------ #
@@ -107,6 +117,19 @@ class EffectManager:
         self.path_sequence_active = True
         self.path_timer           = 0
         self.path_done            = False
+
+    def trigger_milestone(self, milestone_type):
+        """LOOP:99 / JOKER:99 演出を開始する。
+        milestone_type: "LOOP" / "JOKER" / "BOTH"
+        BOTH の場合は LOOP → JOKER の順に2連続で演出する。
+        """
+        self.milestone_active  = True
+        self.milestone_timer   = 0
+        self.milestone_type    = milestone_type
+        self.milestone_phase   = 0
+        self.milestone_done    = False
+        self.milestone_resume  = False
+        self.milestone_second  = False  # BOTH の2本目フラグ
 
     def trigger_dissolve(self, stones_data):
         """ENDLESS MODE 専用：WAY達成石のディゾルブ（溶解消去）アニメーションを登録する。
@@ -191,6 +214,21 @@ class EffectManager:
                 self.board_clear_active = False
                 self.board_clear_done   = True
 
+        # LOOP:99 / JOKER:99 マイルストーン演出
+        if self.milestone_active:
+            self.milestone_timer += 1
+            # フェーズ0: 花火を断続的に打ち上げ（120f）
+            if self.milestone_phase == 0:
+                if self.milestone_timer % 8 == 0 and self.milestone_timer < 120:
+                    rx = random.randint(30, 225)
+                    ry = random.randint(20, 160)
+                    col = 15 if self.milestone_type in ("LOOP", "BOTH") else 10
+                    self.trigger_4way(rx, ry, col)
+                # 120f 経過でフェーズ1（YES/NO）へ
+                if self.milestone_timer >= 120:
+                    self.milestone_phase = 1
+                    self.milestone_timer = 0
+
     # ------------------------------------------------------------------ #
     #  描画
     # ------------------------------------------------------------------ #
@@ -217,6 +255,8 @@ class EffectManager:
             self._draw_path_sequence()
         if self.board_clear_active:
             self._draw_board_clear_bonus()
+        if self.milestone_active:
+            self._draw_milestone()
 
     def _draw_4way(self, e):
         """4WAY エフェクト（十字光＋リング）を描画する。"""
@@ -463,7 +503,7 @@ class EffectManager:
             act_txt = "[J] USE JOKER  [R] GIVE UP"
             act_lines = [(act_txt, self._COL_NORMAL)]
         else:
-            act_lines = [("[R] RELOAD   [U] UNDO", self._COL_NORMAL)]
+            act_lines = [("[U] UNDO   [R] RELOAD", self._COL_NORMAL)]
         all_lines = base_lines + act_lines
 
         bx, by, bw, bh = self._calc_box(all_lines)
@@ -510,14 +550,14 @@ class EffectManager:
             pyxel.text(jx, ty_a, j_t, jc)
             pyxel.text(rx, ty_a, r_t, rc)
         else:
-            r_t = "[R] RELOAD"
             u_t = "[U] UNDO"
-            tx_r = self._tx("[R] RELOAD   [U] UNDO")
-            tx_u = tx_r + len("[R] RELOAD   ") * 4
-            rc = self._COL_HOVER if self._is_hover(mx,my,tx_r,ty_a,r_t) else self._COL_NORMAL
+            r_t = "[R] RELOAD"
+            tx_u = self._tx("[U] UNDO   [R] RELOAD")
+            tx_r = tx_u + len("[U] UNDO   ") * 4
             uc = self._COL_HOVER if self._is_hover(mx,my,tx_u,ty_a,u_t) else self._COL_NORMAL
-            pyxel.text(tx_r, ty_a, r_t, rc)
+            rc = self._COL_HOVER if self._is_hover(mx,my,tx_r,ty_a,r_t) else self._COL_NORMAL
             pyxel.text(tx_u, ty_a, u_t, uc)
+            pyxel.text(tx_r, ty_a, r_t, rc)
 
     def _draw_path_sequence(self):
         """全モード共通：THE PATH メッセージをボックス型で描画する（1.5秒同時出し）。"""
@@ -532,6 +572,83 @@ class EffectManager:
                    self._ly(by, 0), "THE PATH GOES ON...", col)
         pyxel.text(self._tx("EVERY STONE, A STEP FORWARD."),
                    self._ly(by, 1), "EVERY STONE, A STEP FORWARD.", col)
+
+    def _draw_milestone(self):
+        """LOOP:99 / JOKER:99 マイルストーン演出を描画する。"""
+        # 現在表示する称号種別（BOTHの2本目はJOKER）
+        cur = "JOKER" if (self.milestone_type == "BOTH" and self.milestone_second) \
+              else ("LOOP" if self.milestone_type in ("LOOP","BOTH") else "JOKER")
+
+        # 称号テキスト・色設定
+        if cur == "LOOP":
+            title     = "THE LONGEST ROAD IS THE ONE YOU CHOSE TO WALK."
+            sub_col   = 15   # 水色
+            blink_col = 15
+        else:
+            title     = "NINETY-NINE COMPANIONS GATHERED."
+            sub2      = "WITH YOU -- ONE HUNDRED UPON THE ROAD."
+            sub_col   = 10   # 赤
+            blink_col = 10
+
+        # 問いかけメッセージ（全共通）
+        ask_msg = "THE COUNTER STOPS HERE. STILL PROCEED?"
+        ask_col = 7  # 少し落ち着いたグレー
+
+        # 行リスト構築（フェーズに応じて追加）
+        if cur == "LOOP":
+            lines_all = [("LOOP : 99",     1),
+                         (title,           sub_col),
+                         (ask_msg,         ask_col),
+                         ("[Y] YES   [N] NO", self._COL_NORMAL)]
+        else:
+            lines_all = [("JOKER : 99",    1),
+                         (title,           sub_col),
+                         (sub2,            sub_col),
+                         (ask_msg,         ask_col),
+                         ("[Y] YES   [N] NO", self._COL_NORMAL)]
+
+        # フェーズ0: 問いかけと YES/NO は隠す（後ろから2行を除外）
+        if self.milestone_phase == 0:
+            draw_lines = lines_all[:-2]
+        else:
+            draw_lines = lines_all
+
+        bx, by, bw, bh = self._calc_box(lines_all)
+        self._draw_box_frame(bx, by, bw, bh)
+
+        # タイトル行: 点滅（フェーズ0）→ 白固定（フェーズ1）
+        title_txt = "LOOP : 99" if cur == "LOOP" else "JOKER : 99"
+        if self.milestone_phase == 0:
+            blink = (self.milestone_timer // 8) % 2
+            t_col = blink_col if blink == 0 else 1
+        else:
+            t_col = 1
+        pyxel.text(self._tx(title_txt), self._ly(by, 0), title_txt, t_col)
+
+        # サブメッセージ行（フェーズ0: timer>10 から表示）
+        if self.milestone_phase == 0 and self.milestone_timer <= 10:
+            pass  # まだ表示しない
+        else:
+            pyxel.text(self._tx(title), self._ly(by, 1), title, sub_col)
+            if cur == "JOKER":
+                pyxel.text(self._tx(sub2), self._ly(by, 2), sub2, sub_col)
+
+        # 問いかけ と YES/NO行（フェーズ1のみ）
+        if self.milestone_phase == 1:
+            ask_i = len(lines_all) - 2
+            pyxel.text(self._tx(ask_msg), self._ly(by, ask_i), ask_msg, ask_col)
+
+            ai    = len(lines_all) - 1
+            ty_a  = self._ly(by, ai)
+            mx, my = pyxel.mouse_x, pyxel.mouse_y
+            y_t   = "[Y] YES"
+            n_t   = "[N] NO"
+            tx_yn = self._tx("[Y] YES   [N] NO")
+            tx_n  = tx_yn + len("[Y] YES   ") * 4
+            yc = self._COL_HOVER if self._is_hover(mx,my,tx_yn,ty_a,y_t) else self._COL_NORMAL
+            nc = self._COL_HOVER if self._is_hover(mx,my,tx_n, ty_a,n_t) else self._COL_NORMAL
+            pyxel.text(tx_yn, ty_a, y_t, yc)
+            pyxel.text(tx_n,  ty_a, n_t, nc)
 
     def _draw_board_clear_bonus(self):
         """全消しボーナスシーケンスをボックス型で描画する。"""
