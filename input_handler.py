@@ -146,6 +146,11 @@ def handle_result(g, mx, my):
             g.confirm_title = False
         return
 
+    # [P] スクリーンショット（STALEMATE / RESULT 画面でも撮影可）
+    if pyxel.btnp(pyxel.KEY_P):
+        import datetime
+        pyxel.screenshot(f"ishido_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
+
     # ✕ボタンのクリック
     if (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
             and g.btn_x_x <= mx < g.btn_x_x + g.btn_x_w
@@ -389,6 +394,11 @@ def handle_playing(g, mx, my):
         g.confirm_reload = True; input_active = True
     if pyxel.btnp(pyxel.KEY_H) or pyxel.btnp(pyxel.KEY_S):
         logic.trigger_hint(g); input_active = True
+
+    # [P] スクリーンショット（ローカル=PNG保存 / Web=ブラウザダウンロード）
+    if pyxel.btnp(pyxel.KEY_P):
+        import datetime
+        pyxel.screenshot(f"ishido_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
 
     # UNDO（ジョーカー使用中は無効）
     is_undo = False if g.joker_mode else (
