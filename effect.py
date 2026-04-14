@@ -1,5 +1,6 @@
 import pyxel
 import random
+import theme  # ← 【追加】これを忘れずに！
 
 class EffectManager:
     """ゲーム内エフェクトと結果画面の描画を管理するクラス。
@@ -300,29 +301,24 @@ class EffectManager:
                            col)
 
     def _draw_dissolve(self, e):
-        """ディゾルブエフェクト：石が網目状に抜け落ちて背景に溶けるアニメーション。
-
-        進行度（0.0〜1.0）に応じて消すピクセル数を計算し、
-        シャッフル済みリストの先頭から順に背景色(color 6)で上書きする。
-        """
+        """ディゾルブエフェクト：石が網目状に抜け落ちて背景に溶けるアニメーション。"""
         elapsed  = e["max_time"] - e["timer"]
         progress = elapsed / e["max_time"]
         n_clear  = int(len(e["pixels"]) * progress)
         bx, by   = e["bx"], e["by"]
 
-        # まず石を普通に描画（block.Block.draw_stone と同じ内容をインライン展開）
-        stone_col = 9 + e["color_id"]
-        pyxel.rect(bx,     by,     16, 24, 2)
-        pyxel.rect(bx,     by,     15, 23, 9)
-        pyxel.rect(bx + 1, by + 1, 14, 22, 7)
-        pyxel.rect(bx + 3, by + 3, 10, 18, stone_col)
-        s      = str(e["number"])
-        char_x = bx + 6 if len(s) == 1 else bx + 4
-        pyxel.text(char_x, by + 5, s, 1)
-
-        # 進行度分のピクセルを背景色で上書き（ランダム網目状に消える）
+        # 1. 石を描画する前に、現在の画面（完璧な背景）からピクセルの色を直接読み取って保存する！
+        # （これにより、木枠、布地、コーナー金具など、背景の模様が完全に一致します）
+        bg_colors = []
         for px, py in e["pixels"][:n_clear]:
-            pyxel.pset(bx + px, by + py, 6)
+            bg_colors.append(pyxel.pget(bx + px, by + py))
+
+        # 2. 現在の美しい石をフルで描画する
+        theme.draw_stone(bx, by, e["color_id"], e["number"])
+
+        # 3. 保存しておいた「本物の背景色」で上書きし、石が透けていくように見せる
+        for i, (px, py) in enumerate(e["pixels"][:n_clear]):
+            pyxel.pset(bx + px, by + py, bg_colors[i])
 
     def _draw_victory_sequence(self, stats, left, loop=0, joker=0, is_endless=False):
         """勝利演出シーケンスを描画する。"""

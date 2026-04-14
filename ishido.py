@@ -7,8 +7,8 @@
 
 import pyxel
 import random
-
-import theme_default as theme
+import datetime  # ← 【ここに追加】
+import theme
 import se
 import bgm
 import effect
@@ -183,8 +183,15 @@ class Ishido:
     #  更新（状態別）
     # ------------------------------------------------------------------ #
 
+# ishido.py の update 関数内
     def update(self):
         """メインループの更新処理。"""
+
+        # どの画面でも [P] キーでスクリーンショットを保存
+        if pyxel.btnp(pyxel.KEY_P):
+            # 保存ファイル名に日時を付与
+            pyxel.screenshot(f"ishido_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
+
         if self.undo_interval > 0:
             self.undo_interval -= 1
 

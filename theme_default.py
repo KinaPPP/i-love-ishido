@@ -62,6 +62,13 @@ def get_cell_color(x, y):
     return 7 if (is_inner or is_corner) and not is_c_dark else 6
 
 
+def draw_cell_bg(bx, by, x, y):
+    """空きセルの背景を描画する（デフォルト: get_cell_color による単色矩形）。
+    theme_k 等の別テーマではこの関数をオーバーライドして装飾を追加できる。
+    """
+    pyxel.rect(bx, by, 16, 24, get_cell_color(x, y))
+
+
 # ------------------------------------------------------------------ #
 #  石・ジョーカー石の描画
 # ------------------------------------------------------------------ #

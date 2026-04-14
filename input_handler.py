@@ -8,6 +8,7 @@ g の状態を読み書きする。
 
 import pyxel
 import effect
+import theme  # ← 【重要】これをファイルの先頭に書きます
 
 from constants import (
     BOARD_COLS, BOARD_ROWS,
@@ -50,8 +51,14 @@ def _is_hit(mx, my, tx, ty, text):
 #  スタート画面
 # ------------------------------------------------------------------ #
 
+# --- handle_start 関数内 ---
 def handle_start(g, mx, my):
-    """スタート画面の入力処理。"""
+    is_title_clicked = (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and 100 <= mx <= 160 and 110 <= my <= 125)
+
+    if pyxel.btnp(pyxel.KEY_T) or is_title_clicked:
+        theme.switch()  # ← インポートはせず、ただ呼び出すだけでOKです！
+
+    # (以降の [A][I][E][H] 等の処理へ)
     if pyxel.btnp(pyxel.KEY_A):
         g.game_mode = MODE_ALL_WAYS;  g.restart_game(); return
     if pyxel.btnp(pyxel.KEY_I):
@@ -73,6 +80,29 @@ def handle_start(g, mx, my):
 
 def handle_result(g, mx, my):
     """RESULT / STALEMATE 状態の入力処理。"""
+
+    # [T] キーの処理
+    if pyxel.btnp(pyxel.KEY_T):
+        # 演出中、または選択・リロード待ちの状態を定義
+        is_busy = (
+            g.effects.milestone_active or           # [5] マイルストーン
+            g.effects.path_sequence_active or       # [9] THE PATH
+            g.effects.board_clear_active or         # [8] 全消し
+            g.effects.is_joker_rescue or             # [3] JOKER救済
+            g.effects.marvelous_rank is not None or    # [M] MARVELOUS
+            g.effects.is_initial_stalemate or        # [1] 初手詰まり
+            (g.effects.is_victory and g.effects.result_timer < 140) or # [0] 勝利演出中
+            g.effects.is_stalemate                  # [2] 詰み状態（リロード待ちの間はずっとガード）
+        )
+
+        if not is_busy:
+            # 完全に演出が終わり、勝利リザルト画面のボタンが出た後のみタイトルへ
+            g.game_state = STATE_START
+            return
+        else:
+            # 演出中やリロード待ち、JOKER選択中は「テーマ切り替え」として機能
+            theme.switch()
+
     g.effects.update()
 
     # LOOP:99 / JOKER:99 マイルストーン演出中の入力処理
@@ -147,9 +177,9 @@ def handle_result(g, mx, my):
         return
 
     # [P] スクリーンショット（STALEMATE / RESULT 画面でも撮影可）
-    if pyxel.btnp(pyxel.KEY_P):
-        import datetime
-        pyxel.screenshot(f"ishido_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
+    #if pyxel.btnp(pyxel.KEY_P):
+        #import datetime
+        #pyxel.screenshot(f"ishido_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
 
     # ✕ボタンのクリック
     if (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
@@ -309,8 +339,17 @@ def handle_result(g, mx, my):
 #  プレイ中
 # ------------------------------------------------------------------ #
 
+# --- handle_playing 関数内 ---
 def handle_playing(g, mx, my):
-    """ゲームプレイ中の入力処理。"""
+    """プレイ中の入力処理。"""
+
+    # [T] キー、または画面左下の「NEXT石」エリアのタップでテーマ切り替え
+    # 石の判定エリアを右に寄せ、x:40 から 幅16ピクセル分（56まで）に設定
+    is_next_stone_clicked = (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and
+                             45 <= mx <= 61 and g.ui_row_y <= my <= g.ui_row_y + 24)
+
+    if pyxel.btnp(pyxel.KEY_T) or is_next_stone_clicked:
+        theme.switch()
     input_active = False
 
     # タイトル確認ダイアログ
@@ -396,9 +435,9 @@ def handle_playing(g, mx, my):
         logic.trigger_hint(g); input_active = True
 
     # [P] スクリーンショット（ローカル=PNG保存 / Web=ブラウザダウンロード）
-    if pyxel.btnp(pyxel.KEY_P):
-        import datetime
-        pyxel.screenshot(f"ishido_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
+    #if pyxel.btnp(pyxel.KEY_P):
+        #import datetime
+        #pyxel.screenshot(f"ishido_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
 
     # UNDO（ジョーカー使用中は無効）
     is_undo = False if g.joker_mode else (
