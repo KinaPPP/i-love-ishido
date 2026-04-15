@@ -210,22 +210,72 @@
   <div class="card">
     <table class="key-table">
       <tr><td><span class="kbd">SPACE</span> / <span class="kbd">Click</span></td><td class="en">Place stone at cursor</td><td class="ja">カーソル位置に石を置く</td></tr>
-      <tr><td><span class="kbd">H</span></td><td class="en">Toggle hint overlay</td><td class="ja">ヒント表示オン/オフ</td></tr>
+      <tr><td><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> / <span class="kbd">↑</span><span class="kbd">←</span><span class="kbd">↓</span><span class="kbd">→</span></td><td class="en">Move cursor</td><td class="ja">カーソル移動</td></tr>
+      <tr><td><span class="kbd">Q</span> / <span class="kbd">H</span></td><td class="en">Toggle hint overlay</td><td class="ja">ヒント表示オン/オフ</td></tr>
       <tr><td><span class="kbd">U</span> / <span class="kbd">BS</span> / <span class="kbd">右クリック</span></td><td class="en">Undo last placement</td><td class="ja">1手戻す</td></tr>
-      <tr><td><span class="kbd">R</span></td><td class="en">Reload (restart)</td><td class="ja">リロード（リスタート）</td></tr>
-      <tr><td><span class="kbd">J</span></td><td class="en">Open JOKER panel (ENDLESS)</td><td class="ja">ジョーカーパネルを開く（ENDLESS）</td></tr>
+      <tr><td><span class="kbd">R</span> / <span class="kbd">C</span></td><td class="en">Reload (restart)</td><td class="ja">リロード（リスタート）</td></tr>
+      <tr><td><span class="kbd">J</span> / <span class="kbd">F</span></td><td class="en">Open JOKER panel (ENDLESS)</td><td class="ja">ジョーカーパネルを開く（ENDLESS）</td></tr>
       <tr><td><span class="kbd">C</span> / <span class="kbd">N</span></td><td class="en">Select COLOR / NUMBER in JOKER panel</td><td class="ja">ジョーカーパネルでCOLOR / NUMBERを選択</td></tr>
       <tr><td><span class="kbd">B</span> / <span class="kbd">ESC</span></td><td class="en">Cancel / close dialog</td><td class="ja">キャンセル / ダイアログを閉じる</td></tr>
       <tr><td><span class="kbd">Y</span> / <span class="kbd">N</span></td><td class="en">YES / NO in dialogs</td><td class="ja">確認ダイアログでYES / NOを選択</td></tr>
       <tr><td><span class="kbd">G</span></td><td class="en">Go Again (after clear)</td><td class="ja">もう一度（クリア画面から）</td></tr>
-      <tr><td><span class="kbd">T</span></td><td class="en">Return to Title (after clear)</td><td class="ja">タイトルへ戻る（クリア画面から）</td></tr>
+      <tr><td><span class="kbd">T</span></td><td class="en">Cycle theme / Return to Title (after clear)</td><td class="ja">テーマ切替 / タイトルへ戻る（クリア画面から）</td></tr>
+      <tr><td><span class="kbd">P</span></td><td class="en">Screenshot (saves PNG)</td><td class="ja">スクリーンショット（PNG保存）</td></tr>
       <tr><td><span class="kbd">A</span> / <span class="kbd">I</span> / <span class="kbd">E</span></td><td class="en">Select mode on title screen</td><td class="ja">タイトル画面でモードを選択</td></tr>
     </table>
+    <div class="card" style="margin-top:10px;">
+      <p class="en"><strong>Left-hand layout:</strong> <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> cursor &nbsp;·&nbsp; <span class="kbd">SPACE</span> place &nbsp;·&nbsp; <span class="kbd">Z</span> undo &nbsp;·&nbsp; <span class="kbd">Q</span> hint &nbsp;·&nbsp; <span class="kbd">F</span> joker &nbsp;·&nbsp; <span class="kbd">R</span> reload &nbsp;·&nbsp; <span class="kbd">T</span> theme — all reachable without moving your left hand.</p>
+      <p class="ja"><strong>左手完結レイアウト：</strong> <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> カーソル &nbsp;·&nbsp; <span class="kbd">SPACE</span> 置く &nbsp;·&nbsp; <span class="kbd">Z</span> アンドゥ &nbsp;·&nbsp; <span class="kbd">Q</span> ヒント &nbsp;·&nbsp; <span class="kbd">F</span> ジョーカー &nbsp;·&nbsp; <span class="kbd">R</span> リロード &nbsp;·&nbsp; <span class="kbd">T</span> テーマ — 左手だけで全操作が完結します。</p>
+    </div>
   </div>
 </section>
 
 <section>
-  <div class="section-header"><div class="section-num">6</div><h2 class="en">ABOUT THE ORIGINAL ISHIDO</h2><h2 class="ja">オリジナル「石道」について</h2></div>
+  <div class="section-header"><div class="section-num">6</div><h2 class="en">THEMES &amp; ACCESSIBILITY</h2><h2 class="ja">テーマと色覚サポート</h2></div>
+  <div class="card">
+    <p class="en">Press <span class="kbd">T</span> at any time — or click the NEXT stone display — to cycle through five visual themes. Themes change instantly without interrupting gameplay.</p>
+    <p class="ja"><span class="kbd">T</span>キーを押すか、NEXTの石表示をクリックすると、5種類のテーマをいつでも切り替えられます。ゲームを中断せず即座に反映されます。</p>
+  </div>
+  <div class="mode-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
+    <div class="mode-card">
+      <div class="mode-label">THEME 1</div>
+      <div class="mode-name">DEFAULT</div>
+      <div class="mode-desc en">Classic grey palette. Numeric tiles.</div>
+      <div class="mode-desc ja">グレー系パレット。数字コマ。</div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-label">THEME 2</div>
+      <div class="mode-name">DEFAULT CUD</div>
+      <div class="mode-desc en">Same design, color-vision-friendly palette. Blue → orange, green → dark green, cyan → platinum.</div>
+      <div class="mode-desc ja">同デザイン、色覚サポート配色。青→オレンジ、緑→深緑、水色→プラチナに変更。</div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-label">THEME 3</div>
+      <div class="mode-name">KANJI</div>
+      <div class="mode-desc en">Warm wood palette. Oval jewel tiles with kanji numerals 一〜六.</div>
+      <div class="mode-desc ja">温かみのある木調パレット。楕円型コマに漢数字一〜六。</div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-label">THEME 4</div>
+      <div class="mode-name">KANJI CUD</div>
+      <div class="mode-desc en">Kanji design with color-vision-friendly palette.</div>
+      <div class="mode-desc ja">漢字テーマの色覚サポート版。</div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-label">THEME 5</div>
+      <div class="mode-name">SEA</div>
+      <div class="mode-desc en">Deep-sea blue palette. Coin-bag tiles with Roman numerals I–VI. CUD-friendly by design.</div>
+      <div class="mode-desc ja">深海ブルーのパレット。巻貝袋型コマにローマ数字I〜VI。CUD対応設計。</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:10px;">
+    <p class="en"><strong>About CUD (Color Universal Design):</strong> The CUD themes replace blue, bright green, and cyan — colors that can be hard to distinguish for people with P-type or D-type color vision (affecting roughly 5% of people). The replacements — orange, dark green, and platinum — spread across different hue families so each stone remains visually distinct.</p>
+    <p class="ja"><strong>CUD（カラーユニバーサルデザイン）について：</strong>CUDテーマでは、P型・D型色覚（人口の約5%）で識別しにくい青・明緑・水色を、オレンジ・深緑・プラチナに置き換えています。それぞれ異なる色相に分散させることで、どのコマも視覚的に区別しやすくなります。</p>
+  </div>
+</section>
+
+<section>
+  <div class="section-header"><div class="section-num">7</div><h2 class="en">ABOUT THE ORIGINAL ISHIDO</h2><h2 class="ja">オリジナル「石道」について</h2></div>
   <div class="tribute">
     <p class="en"><strong>Ishido: The Way of Stones</strong> is a classic puzzle game first released in 1990 by Publishing International for the Macintosh. It was subsequently ported to DOS, Amiga, Atari ST, and various game consoles. The PC-98 version — the one KINA played — was published in Japan by <strong>ASCII Corporation</strong>, and left a lasting impression with its meditative pace and elegant stone-matching mechanics.</p>
     <p class="ja"><strong>石道（Ishido: The Way of Stones）</strong>は、1990年にPublishing InternationalよりMacintosh向けに発売されたパズルゲームです。その後DOS・Amiga・Atari STや各種コンソール機へ移植されました。KINAが遊んだPC-9801版は、当時の<strong>株式会社アスキー</strong>から発売されており、瞑想的なテンポと美しい石のマッチング感覚が今でも忘れられません。</p>

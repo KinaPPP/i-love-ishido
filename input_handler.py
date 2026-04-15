@@ -224,7 +224,7 @@ def handle_result(g, mx, my):
     # STALEMATE 画面
     if g.game_state == STATE_STALEMATE and g.effects.result_timer > 60:
         if g.effects.is_joker_rescue:
-            use_joker = pyxel.btnp(pyxel.KEY_J) or pyxel.btnp(pyxel.KEY_A) or (
+            use_joker = pyxel.btnp(pyxel.KEY_J) or pyxel.btnp(pyxel.KEY_F) or (
                 pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and (
                     (g.btn_joker_x <= mx < g.btn_joker_x + g.btn_w
                      and g.ui_row_y <= my < g.ui_row_y + g.btn_h)
@@ -280,7 +280,7 @@ def handle_result(g, mx, my):
             r_t = "[R] GIVE UP"
             jx  = _tx("[J] USE JOKER  [R] GIVE UP")
             rx  = jx + len("[J] USE JOKER  ")*4
-            use_joker = pyxel.btnp(pyxel.KEY_J) or pyxel.btnp(pyxel.KEY_A) or (
+            use_joker = pyxel.btnp(pyxel.KEY_J) or pyxel.btnp(pyxel.KEY_F) or (
                 pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
                 and (_is_hit(mx,my,jx,ty_a,j_t)
                      or (g.btn_joker_x <= mx < g.btn_joker_x+g.btn_w
@@ -403,7 +403,7 @@ def handle_playing(g, mx, my):
 
     # Jボタン（ENDLESS）
     if g.game_mode == MODE_ENDLESS and not g.joker_mode:
-        if (pyxel.btnp(pyxel.KEY_J) or pyxel.btnp(pyxel.KEY_A)) and g.joker_count > 0:
+        if (pyxel.btnp(pyxel.KEY_J) or pyxel.btnp(pyxel.KEY_F)) and g.joker_count > 0:
             g.joker_panel_open = True
         if (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
                 and g.btn_joker_x <= mx < g.btn_joker_x + g.btn_w
@@ -431,7 +431,7 @@ def handle_playing(g, mx, my):
     # R / H ボタン
     if pyxel.btnp(pyxel.KEY_R) or pyxel.btnp(pyxel.KEY_C):
         g.confirm_reload = True; input_active = True
-    if pyxel.btnp(pyxel.KEY_H) or pyxel.btnp(pyxel.KEY_S):
+    if pyxel.btnp(pyxel.KEY_H) or pyxel.btnp(pyxel.KEY_Q):
         logic.trigger_hint(g); input_active = True
 
     # [P] スクリーンショット（ローカル=PNG保存 / Web=ブラウザダウンロード）
@@ -459,11 +459,21 @@ def handle_playing(g, mx, my):
         if g.btn_reload_x <= mx < g.btn_reload_x + g.btn_w:
             g.confirm_reload = True; input_active = True
 
-    # カーソル更新
+    # カーソル更新（マウス）
     if (g.offset_x <= mx < g.offset_x + BOARD_COLS * g.gap_x
             and g.offset_y <= my < g.offset_y + BOARD_ROWS * g.gap_y):
         g.cursor_x = (mx - g.offset_x) // g.gap_x
         g.cursor_y = (my - g.offset_y) // g.gap_y
+
+    # カーソル移動（WASD / 矢印キー）
+    if pyxel.btnp(pyxel.KEY_W) or pyxel.btnp(pyxel.KEY_UP):
+        g.cursor_y = max(0, g.cursor_y - 1);              input_active = True
+    if pyxel.btnp(pyxel.KEY_S) or pyxel.btnp(pyxel.KEY_DOWN):
+        g.cursor_y = min(BOARD_ROWS - 1, g.cursor_y + 1); input_active = True
+    if pyxel.btnp(pyxel.KEY_A) or pyxel.btnp(pyxel.KEY_LEFT):
+        g.cursor_x = max(0, g.cursor_x - 1);              input_active = True
+    if pyxel.btnp(pyxel.KEY_D) or pyxel.btnp(pyxel.KEY_RIGHT):
+        g.cursor_x = min(BOARD_COLS - 1, g.cursor_x + 1); input_active = True
 
     # 石の配置
     is_place = pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.KEY_RETURN) or (

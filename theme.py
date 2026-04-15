@@ -1,17 +1,36 @@
 """
 theme.py — I LOVE ISHIDO テーマ管理モジュール
+
+テーマ切り替え順（[T] キー）:
+  DEFAULT → KANJI → SEA → DEFAULT CUD → KANJI CUD → DEFAULT ...
 """
+
 import theme_default
 import theme_k
+import theme_s
+import theme_default_cud
+import theme_k_cud
 
-# 初期テーマはデフォルトを設定
+# テーマ切り替え順: 同デザインのCUD版を隣接させて比較しやすく
+_THEMES = [theme_default, theme_default_cud, theme_k, theme_k_cud, theme_s]
+_LABELS = ["DEFAULT", "DEFAULT CUD", "KANJI", "KANJI CUD", "SEA"]
+
+# 初期テーマ
 _current = theme_default
 
+
 def switch():
-    """テーマを切り替え、パレットを即座に更新する"""
+    """テーマを順番に切り替え、パレットを即座に更新する。"""
     global _current
-    _current = theme_k if _current == theme_default else theme_default
+    idx = _THEMES.index(_current)
+    _current = _THEMES[(idx + 1) % len(_THEMES)]
     _current.setup_palette()
+
+
+def current_label():
+    """現在のテーマ名を返す（タイトルバー表示用）。"""
+    return _LABELS[_THEMES.index(_current)]
+
 
 # --- 各モジュールから呼び出される共通インターフェース ---
 
